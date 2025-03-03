@@ -220,49 +220,78 @@ const AddOrderForm = ({ onSuccess }: { onSuccess?: () => void }) => {
       if (itemsError) throw itemsError;
 
       for (const item of order.items) {
-        const { error: stockError } = await supabase.rpc('decrement', {
-          x: item.quantity,
-          column_name: 'stock',
-          table_name: 'products',
-          row_id: item.product_id,
-        } as any);
+        try {
+          const { error: stockError } = await supabase.rpc('decrement', {
+            x: item.quantity
+          });
 
-        if (stockError) {
-          console.error("Error updating stock:", stockError);
-          const { error: fallbackError } = await supabase
+          if (stockError) {
+            throw stockError;
+          }
+        } catch (error) {
+          console.error("Error using RPC to update stock:", error);
+          
+          const { data: productData, error: fetchError } = await supabase
+            .from('products')
+            .select('stock')
+            .eq('id', item.product_id)
+            .single();
+            
+          if (fetchError) {
+            console.error("Error fetching product:", fetchError);
+            continue;
+          }
+            
+          const newStock = Math.max(0, (productData.stock || 0) - item.quantity);
+          const { error: updateError } = await supabase
             .from('products')
             .update({ 
-              stock: supabase.sql`stock - ${item.quantity}`,
+              stock: newStock,
               last_updated: new Date().toISOString()
             })
             .eq('id', item.product_id);
-
-          if (fallbackError) {
-            console.error("Error updating stock (fallback):", fallbackError);
+            
+          if (updateError) {
+            console.error("Error updating stock:", updateError);
           }
         }
       }
 
-      const { error: customerError } = await supabase.rpc('add_amount', {
-        base: 0,
-        amount: total,
-        column_name: 'total_spent',
-        table_name: 'customers',
-        row_id: order.customer_id,
-      } as any);
+      try {
+        const { error: customerError } = await supabase.rpc('add_amount', {
+          base: 0,
+          amount: total
+        });
 
-      if (customerError) {
-        console.error("Error updating customer stats:", customerError);
-        const { error: fallbackError } = await supabase
+        if (customerError) {
+          throw customerError;
+        }
+      } catch (error) {
+        console.error("Error using RPC to update customer stats:", error);
+        
+        const { data: customerData, error: fetchError } = await supabase
           .from('customers')
-          .update({ 
-            total_orders: supabase.sql`total_orders + 1`,
-            total_spent: supabase.sql`total_spent + ${total}`
-          })
-          .eq('id', order.customer_id);
-
-        if (fallbackError) {
-          console.error("Error updating customer stats (fallback):", fallbackError);
+          .select('total_orders, total_spent')
+          .eq('id', order.customer_id)
+          .single();
+          
+        if (fetchError) {
+          console.error("Error fetching customer:", fetchError);
+        } else {
+          const newTotalOrders = (customerData.total_orders || 0) + 1;
+          const newTotalSpent = (customerData.total_spent || 0) + total;
+          
+          const { error: updateError } = await supabase
+            .from('customers')
+            .update({ 
+              total_orders: newTotalOrders,
+              total_spent: newTotalSpent
+            })
+            .eq('id', order.customer_id);
+            
+          if (updateError) {
+            console.error("Error updating customer stats:", updateError);
+          }
         }
       }
 
