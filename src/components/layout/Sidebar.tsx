@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -25,6 +26,7 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const location = useLocation();
+  const { signOut, isAdmin } = useAuth();
   
   const mainItems = [
     { name: "Dashboard", path: "/", icon: Home },
@@ -101,7 +103,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       </ScrollArea>
       
       <div className="mt-auto border-t p-4">
-        <Button variant="ghost" className="w-full justify-start gap-2">
+        <Button 
+          variant="ghost" 
+          className="w-full justify-start gap-2"
+          onClick={() => signOut()}
+        >
           <LogOut className="h-5 w-5" />
           <span>Logout</span>
         </Button>

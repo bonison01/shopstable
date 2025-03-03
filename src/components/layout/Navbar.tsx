@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Bell, Menu, Search, Settings, User } from "lucide-react";
+import { Bell, Menu, Search, Settings, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -13,6 +13,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface NavbarProps {
   toggleSidebar: () => void;
@@ -20,6 +21,16 @@ interface NavbarProps {
 
 export function Navbar({ toggleSidebar }: NavbarProps) {
   const [searchValue, setSearchValue] = useState("");
+  const { user, profile, signOut } = useAuth();
+
+  const getInitials = () => {
+    if (profile?.first_name && profile?.last_name) {
+      return `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase();
+    } else if (user?.email) {
+      return user.email[0].toUpperCase();
+    }
+    return "U";
+  };
 
   return (
     <header className="sticky top-0 z-30 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -96,15 +107,19 @@ export function Navbar({ toggleSidebar }: NavbarProps) {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="rounded-full">
                   <Avatar className="h-8 w-8">
-                    <AvatarFallback>AD</AvatarFallback>
+                    <AvatarFallback>{getInitials()}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <div className="flex items-center justify-start gap-2 p-2">
                   <div className="flex flex-col space-y-1 leading-none">
-                    <p className="font-medium">Admin User</p>
-                    <p className="text-xs text-muted-foreground">admin@example.com</p>
+                    <p className="font-medium">
+                      {profile?.first_name 
+                        ? `${profile.first_name} ${profile.last_name || ''}`
+                        : user?.email || 'User'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{user?.email}</p>
                   </div>
                 </div>
                 <DropdownMenuSeparator />
@@ -117,7 +132,10 @@ export function Navbar({ toggleSidebar }: NavbarProps) {
                   <span>Settings</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>Logout</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => signOut()}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Logout</span>
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

@@ -15,6 +15,16 @@ export function formatDate(dateString: string): string {
   });
 }
 
+export function formatDateTime(dateString: string): string {
+  return new Date(dateString).toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 export function getStatusColor(status: string): string {
   switch (status.toLowerCase()) {
     case 'active':
@@ -33,4 +43,41 @@ export function getStatusColor(status: string): string {
     default:
       return 'bg-gray-500';
   }
+}
+
+export function truncateText(text: string, maxLength: number = 50): string {
+  if (!text) return '';
+  return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
+}
+
+export function getInitials(name: string): string {
+  if (!name) return 'U';
+  
+  const parts = name.split(' ');
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+}
+
+export function calculateDaysLeft(dueDate: string): number {
+  const today = new Date();
+  const due = new Date(dueDate);
+  const differenceMs = due.getTime() - today.getTime();
+  return Math.ceil(differenceMs / (1000 * 60 * 60 * 24));
+}
+
+export function formatPhoneNumber(phone: string): string {
+  if (!phone) return '';
+  
+  // Remove all non-numeric characters
+  const cleaned = phone.replace(/\D/g, '');
+  
+  // Check if the input is of correct length
+  const match = cleaned.match(/^(\d{3})(\d{3})(\d{4})$/);
+  
+  if (match) {
+    return '(' + match[1] + ') ' + match[2] + '-' + match[3];
+  }
+  
+  return phone;
 }
