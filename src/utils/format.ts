@@ -85,6 +85,16 @@ export function formatPhoneNumber(phone: string): string {
   return phone;
 }
 
+// Custom RPC parameters interface
+export interface RPCParams {
+  row_id: string;
+  column_name: string;
+  table_name: string;
+  x?: number;
+  amount?: number;
+  base?: number;
+}
+
 // Functions for the DB RPC calls
 export function decrement(value: number, amount: number): number {
   return Math.max(0, value - amount);

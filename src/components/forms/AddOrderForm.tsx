@@ -233,32 +233,53 @@ const AddOrderForm = ({ onSuccess }: { onSuccess?: () => void }) => {
 
       // Update product stock
       for (const item of order.items) {
-        const { error: stockError } = await supabase
-          .from('products')
-          .update({ 
-            stock: supabase.rpc('decrement', { x: item.quantity }),
-            last_updated: new Date().toISOString()
-          })
-          .eq('id', item.product_id);
+        const { error: stockError } = await supabase.rpc('decrement', {
+          x: item.quantity,
+          column_name: 'stock',
+          table_name: 'products',
+          row_id: item.product_id,
+        });
 
         if (stockError) {
           console.error("Error updating stock:", stockError);
-          // Continue with other updates even if one fails
+          // Instead of using RPC for now, use direct update
+          const { error: fallbackError } = await supabase
+            .from('products')
+            .update({ 
+              stock: product => product.stock - item.quantity,
+              last_updated: new Date().toISOString()
+            })
+            .eq('id', item.product_id);
+
+          if (fallbackError) {
+            console.error("Error updating stock (fallback):", fallbackError);
+          }
         }
       }
 
       // Update customer stats
-      const { error: customerError } = await supabase
-        .from('customers')
-        .update({ 
-          total_orders: supabase.rpc('increment', { x: 1 }),
-          total_spent: supabase.rpc('add_amount', { amount: total })
-        })
-        .eq('id', order.customer_id);
+      const { error: customerError } = await supabase.rpc('add_amount', {
+        base: 0,
+        amount: total,
+        column_name: 'total_spent',
+        table_name: 'customers',
+        row_id: order.customer_id,
+      });
 
       if (customerError) {
         console.error("Error updating customer stats:", customerError);
-        // Continue even if this fails
+        // Use direct update as fallback
+        const { error: fallbackError } = await supabase
+          .from('customers')
+          .update({ 
+            total_orders: customer => customer.total_orders + 1,
+            total_spent: customer => customer.total_spent + total
+          })
+          .eq('id', order.customer_id);
+
+        if (fallbackError) {
+          console.error("Error updating customer stats (fallback):", fallbackError);
+        }
       }
 
       toast({

@@ -217,7 +217,25 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      add_amount: {
+        Args: {
+          base: number
+          amount: number
+        }
+        Returns: number
+      }
+      decrement: {
+        Args: {
+          x: number
+        }
+        Returns: number
+      }
+      increment: {
+        Args: {
+          x: number
+        }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never
