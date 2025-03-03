@@ -8,6 +8,7 @@ export function formatCurrency(amount: number): string {
 }
 
 export function formatDate(dateString: string): string {
+  if (!dateString) return '';
   return new Date(dateString).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
@@ -16,6 +17,7 @@ export function formatDate(dateString: string): string {
 }
 
 export function formatDateTime(dateString: string): string {
+  if (!dateString) return '';
   return new Date(dateString).toLocaleString('en-US', {
     year: 'numeric',
     month: 'short',
@@ -60,6 +62,7 @@ export function getInitials(name: string): string {
 }
 
 export function calculateDaysLeft(dueDate: string): number {
+  if (!dueDate) return 0;
   const today = new Date();
   const due = new Date(dueDate);
   const differenceMs = due.getTime() - today.getTime();
@@ -80,4 +83,17 @@ export function formatPhoneNumber(phone: string): string {
   }
   
   return phone;
+}
+
+// Functions for the DB RPC calls
+export function decrement(value: number, amount: number): number {
+  return Math.max(0, value - amount);
+}
+
+export function increment(value: number, amount: number = 1): number {
+  return value + amount;
+}
+
+export function addAmount(value: number, amount: number): number {
+  return value + amount;
 }

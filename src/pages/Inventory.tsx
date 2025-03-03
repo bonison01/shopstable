@@ -1,125 +1,131 @@
 
 import { useState } from "react";
-import { 
-  Box, 
-  Plus, 
-  Package, 
-  BarChart, 
-  Tag, 
-  History,
-  AlertCircle
-} from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { Navbar } from "@/components/layout/Navbar";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { SearchFilter } from "@/components/ui/SearchFilter";
-import { DataTable } from "@/components/ui/DataTable";
-import { ProductCard } from "@/components/ProductCard";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { formatCurrency } from "@/utils/format";
+import { Package, Plus, Search, AlertTriangle, CheckCircle, XCircle, Edit, Trash } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Dialog, 
   DialogContent, 
   DialogHeader, 
   DialogTitle,
-  DialogTrigger 
+  DialogTrigger,
+  DialogDescription,
+  DialogFooter,
+  DialogClose
 } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Navbar } from "@/components/layout/Navbar";
-import { Sidebar } from "@/components/layout/Sidebar";
-import { products } from "@/data/mockData";
-import { formatCurrency, formatDate } from "@/utils/format";
+import AddProductForm from "@/components/forms/AddProductForm";
 
 const Inventory = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filter, setFilter] = useState("all");
-  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [stockFilter, setStockFilter] = useState("all");
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const { toast } = useToast();
   
+  const { data: products, isLoading, error, refetch } = useQuery({
+    queryKey: ['products'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .order('name');
+      
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Error fetching products",
+          description: error.message,
+        });
+        throw error;
+      }
+      
+      return data || [];
+    },
+  });
+
+  // Get unique categories for the filter
+  const categories = products ? 
+    ["all", ...Array.from(new Set(products.map(product => product.category)))] : 
+    ["all"];
+
+  const filteredProducts = products?.filter(product => {
+    // Apply search filter
+    const matchesSearch = 
+      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (product.description && product.description.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    // Apply category filter
+    const matchesCategory = categoryFilter === "all" || product.category === categoryFilter;
+    
+    // Apply stock filter
+    const matchesStock = 
+      stockFilter === "all" || 
+      (stockFilter === "in-stock" && product.stock > 0) ||
+      (stockFilter === "low-stock" && product.stock <= product.threshold && product.stock > 0) ||
+      (stockFilter === "out-of-stock" && product.stock === 0);
+    
+    return matchesSearch && matchesCategory && matchesStock;
+  });
+
+  const getStockStatus = (product: any) => {
+    if (product.stock === 0) {
+      return { label: "Out of Stock", variant: "destructive", icon: XCircle };
+    } else if (product.stock <= product.threshold) {
+      return { label: "Low Stock", variant: "warning", icon: AlertTriangle };
+    } else {
+      return { label: "In Stock", variant: "success", icon: CheckCircle };
+    }
+  };
+
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };
-  
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
+
+  const handleAddProduct = () => {
+    setAddDialogOpen(false);
+    refetch();
   };
-  
-  const handleFilter = (value: string) => {
-    setFilter(value);
-  };
-  
-  const filterProducts = () => {
-    let filtered = products;
+
+  const handleDeleteProduct = async () => {
+    if (!selectedProduct) return;
     
-    if (searchQuery) {
-      filtered = filtered.filter(
-        (product) =>
-          product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          product.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          product.sku.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+    try {
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', selectedProduct.id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Product Deleted",
+        description: `${selectedProduct.name} has been removed from inventory.`,
+      });
+      
+      refetch();
+      setDeleteDialogOpen(false);
+      setSelectedProduct(null);
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: err.message || "Failed to delete product",
+      });
     }
-    
-    if (filter !== "all") {
-      if (filter === "low_stock") {
-        filtered = filtered.filter((product) => product.stock <= product.threshold);
-      } else {
-        filtered = filtered.filter((product) => product.category === filter);
-      }
-    }
-    
-    return filtered;
   };
-  
-  const filteredProducts = filterProducts();
-  
-  const productColumns = [
-    {
-      header: "Product",
-      accessorKey: "name",
-      cell: (product) => (
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center">
-            <Package className="h-4 w-4 text-primary" />
-          </div>
-          <span className="font-medium">{product.name}</span>
-        </div>
-      ),
-    },
-    {
-      header: "Category",
-      accessorKey: "category",
-    },
-    {
-      header: "Price",
-      accessorKey: "price",
-      cell: (product) => formatCurrency(product.price),
-    },
-    {
-      header: "Stock",
-      accessorKey: "stock",
-      cell: (product) => (
-        <div className={`font-medium ${product.stock <= product.threshold ? "text-destructive" : ""}`}>
-          {product.stock} units
-        </div>
-      ),
-    },
-    {
-      header: "SKU",
-      accessorKey: "sku",
-    },
-    {
-      header: "Status",
-      accessorKey: "stock",
-      cell: (product) => {
-        const isLowStock = product.stock <= product.threshold;
-        return (
-          <Badge variant={isLowStock ? "destructive" : "default"}>
-            {isLowStock ? "Low Stock" : "In Stock"}
-          </Badge>
-        );
-      },
-    },
-  ];
-  
+
   return (
     <div className="flex min-h-screen bg-muted/40">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -127,197 +133,181 @@ const Inventory = () => {
       <div className="flex flex-1 flex-col">
         <Navbar toggleSidebar={toggleSidebar} />
         
-        <main className="flex-1 px-4 py-8 md:px-6 lg:px-8 animate-fade-in">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
+        <main className="flex-1 p-4 md:p-6 lg:p-8">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
             <div>
               <h1 className="text-3xl font-bold tracking-tight mb-1">Inventory</h1>
-              <p className="text-muted-foreground">
-                Manage products, stock levels, and categories
-              </p>
+              <p className="text-muted-foreground">Manage your product inventory</p>
+            </div>
+            <div className="flex gap-2 mt-4 sm:mt-0">
+              <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Product
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[600px]">
+                  <DialogHeader>
+                    <DialogTitle>Add New Product</DialogTitle>
+                    <DialogDescription>
+                      Fill in the details to add a new product to your inventory.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <AddProductForm onSuccess={handleAddProduct} />
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
+          
+          <div className="flex flex-col lg:flex-row gap-4 mb-6">
+            <div className="flex-grow">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Search products by name or SKU..."
+                  className="pl-8 w-full"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
             </div>
             
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button className="mt-4 sm:mt-0">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Product
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>Add New Product</DialogTitle>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  {/* Form fields would go here */}
-                  <p className="text-muted-foreground text-center py-4">
-                    Product creation form would be implemented here
-                  </p>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
-          
-          <div className="mb-8">
-            <SearchFilter
-              onSearch={handleSearch}
-              onFilter={handleFilter}
-              filterOptions={[
-                { label: "All Products", value: "all" },
-                { label: "Low Stock", value: "low_stock" },
-                { label: "Electronics", value: "Electronics" },
-                { label: "Accessories", value: "Accessories" },
-              ]}
-              placeholder="Search products..."
-            />
-          </div>
-          
-          <Tabs defaultValue="table" className="animate-fade-in">
-            <TabsList className="mb-6">
-              <TabsTrigger value="table">Table View</TabsTrigger>
-              <TabsTrigger value="grid">Grid View</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="table">
-              <DataTable
-                data={filteredProducts}
-                columns={productColumns}
-                rowKey="id"
-                onRowClick={(product) => setSelectedProduct(product)}
-              />
-            </TabsContent>
-            
-            <TabsContent value="grid">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredProducts.map((product) => (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                    onClick={() => setSelectedProduct(product)}
-                  />
-                ))}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="w-full sm:w-48">
+                <select 
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 py-2"
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                >
+                  <option value="all">All Categories</option>
+                  {categories.filter(cat => cat !== "all").map(category => (
+                    <option key={category} value={category}>{category}</option>
+                  ))}
+                </select>
               </div>
-            </TabsContent>
-          </Tabs>
+              
+              <div className="w-full sm:w-48">
+                <select 
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 py-2"
+                  value={stockFilter}
+                  onChange={(e) => setStockFilter(e.target.value)}
+                >
+                  <option value="all">All Stock Status</option>
+                  <option value="in-stock">In Stock</option>
+                  <option value="low-stock">Low Stock</option>
+                  <option value="out-of-stock">Out of Stock</option>
+                </select>
+              </div>
+            </div>
+          </div>
           
-          {selectedProduct && (
-            <Dialog open={Boolean(selectedProduct)} onOpenChange={() => setSelectedProduct(null)}>
-              <DialogContent className="sm:max-w-[600px]">
-                <DialogHeader>
-                  <DialogTitle>Product Details</DialogTitle>
-                </DialogHeader>
-                <div className="grid gap-6">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                    <div className="h-16 w-16 rounded-md bg-primary/10 flex items-center justify-center">
-                      <Package className="h-8 w-8 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold">{selectedProduct.name}</h3>
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Badge>{selectedProduct.category}</Badge>
-                        <span>•</span>
-                        <span>SKU: {selectedProduct.sku}</span>
+          {isLoading ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-pulse">Loading inventory...</div>
+            </div>
+          ) : error ? (
+            <div className="text-center text-red-500">
+              Error loading inventory. Please try again.
+            </div>
+          ) : filteredProducts?.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-64 border rounded-lg bg-card">
+              <Package className="h-12 w-12 text-muted-foreground mb-4" />
+              <p className="text-muted-foreground mb-2">No products found</p>
+              <Button onClick={() => setAddDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Your First Product
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {filteredProducts?.map(product => {
+                const stockStatus = getStockStatus(product);
+                return (
+                  <Card key={product.id} className="overflow-hidden">
+                    <div className="h-3 bg-primary w-full"></div>
+                    <CardHeader className="p-4 pb-0">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <CardTitle className="line-clamp-1" title={product.name}>
+                            {product.name}
+                          </CardTitle>
+                          <CardDescription>
+                            SKU: {product.sku}
+                          </CardDescription>
+                        </div>
+                        <Badge variant={
+                          stockStatus.variant === "success" ? "default" : 
+                          stockStatus.variant === "warning" ? "secondary" : 
+                          "destructive"
+                        }>
+                          <stockStatus.icon className="h-3 w-3 mr-1" /> 
+                          {stockStatus.label}
+                        </Badge>
                       </div>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-base">Product Information</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        <div className="flex items-start gap-2">
-                          <Tag className="h-4 w-4 text-muted-foreground mt-0.5" />
-                          <div>
-                            <div className="font-medium">Price</div>
-                            <div className="text-sm text-muted-foreground">
-                              {formatCurrency(selectedProduct.price)}
-                            </div>
-                          </div>
+                    </CardHeader>
+                    <CardContent className="p-4">
+                      <div className="flex flex-col gap-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Category:</span>
+                          <span className="font-medium">{product.category}</span>
                         </div>
-                        <div className="flex items-start gap-2">
-                          <History className="h-4 w-4 text-muted-foreground mt-0.5" />
-                          <div>
-                            <div className="font-medium">Last Updated</div>
-                            <div className="text-sm text-muted-foreground">
-                              {formatDate(selectedProduct.lastUpdated)}
-                            </div>
-                          </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Price:</span>
+                          <span className="font-medium">{formatCurrency(product.price)}</span>
                         </div>
-                        <div className="flex items-start gap-2">
-                          <Box className="h-4 w-4 text-muted-foreground mt-0.5" />
-                          <div>
-                            <div className="font-medium">Description</div>
-                            <div className="text-sm text-muted-foreground">
-                              {selectedProduct.description}
-                            </div>
-                          </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Stock:</span>
+                          <span className="font-medium">{product.stock} units</span>
                         </div>
-                      </CardContent>
-                    </Card>
-                    
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-base">Inventory Status</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        <div className="flex items-start gap-2">
-                          <Box className="h-4 w-4 text-muted-foreground mt-0.5" />
-                          <div>
-                            <div className="font-medium">Current Stock</div>
-                            <div className={`text-sm ${selectedProduct.stock <= selectedProduct.threshold ? "text-destructive" : "text-muted-foreground"}`}>
-                              {selectedProduct.stock} units
-                              {selectedProduct.stock <= selectedProduct.threshold && (
-                                <div className="flex items-center gap-1 text-destructive mt-1">
-                                  <AlertCircle className="h-3 w-3" />
-                                  Low stock alert
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-start gap-2">
-                          <BarChart className="h-4 w-4 text-muted-foreground mt-0.5" />
-                          <div>
-                            <div className="font-medium">Stock Threshold</div>
-                            <div className="text-sm text-muted-foreground">
-                              {selectedProduct.threshold} units
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="mt-2">
-                          <div className="text-sm font-medium mb-1">Stock Level</div>
-                          <div className="h-2 w-full bg-muted rounded-full">
-                            <div 
-                              className={`h-2 rounded-full ${
-                                selectedProduct.stock <= selectedProduct.threshold 
-                                  ? "bg-destructive" 
-                                  : "bg-primary"
-                              }`}
-                              style={{ 
-                                width: `${Math.min(
-                                  (selectedProduct.stock / (selectedProduct.threshold * 4)) * 100, 
-                                  100
-                                )}%` 
-                              }}
-                            />
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                  
-                  <div className="flex justify-end gap-2">
-                    <Button variant="outline" onClick={() => setSelectedProduct(null)}>
-                      Close
-                    </Button>
-                    <Button>Edit Product</Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
+                      </div>
+                      
+                      <div className="flex gap-2 mt-4">
+                        <Button variant="outline" size="sm" className="flex-1">
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="flex-1 text-red-500 hover:text-red-600"
+                          onClick={() => {
+                            setSelectedProduct(product);
+                            setDeleteDialogOpen(true);
+                          }}
+                        >
+                          <Trash className="h-4 w-4 mr-2" />
+                          Delete
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
           )}
+          
+          {/* Delete Confirmation Dialog */}
+          <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Confirm Deletion</DialogTitle>
+                <DialogDescription>
+                  Are you sure you want to delete {selectedProduct?.name}? 
+                  This action cannot be undone.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline">Cancel</Button>
+                </DialogClose>
+                <Button variant="destructive" onClick={handleDeleteProduct}>
+                  Delete
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </main>
       </div>
     </div>

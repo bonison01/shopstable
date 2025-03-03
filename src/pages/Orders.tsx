@@ -12,13 +12,23 @@ import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatDate, getStatusColor } from "@/utils/format";
 import { FileText, Plus, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger 
+} from "@/components/ui/dialog";
+import AddOrderForm from "@/components/forms/AddOrderForm";
 
 const Orders = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  const { data: orders, isLoading, error } = useQuery({
+  const { data: orders, isLoading, error, refetch } = useQuery({
     queryKey: ['orders'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -48,6 +58,11 @@ const Orders = () => {
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
+  };
+
+  const handleAddOrder = () => {
+    setAddDialogOpen(false);
+    refetch();
   };
 
   const filteredOrders = orders?.filter(order => 
@@ -83,10 +98,23 @@ const Orders = () => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                New Order
-              </Button>
+              <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    New Order
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Create New Order</DialogTitle>
+                    <DialogDescription>
+                      Fill in the details to create a new customer order.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <AddOrderForm onSuccess={handleAddOrder} />
+                </DialogContent>
+              </Dialog>
               <Button variant="outline">
                 <FileText className="h-4 w-4 mr-2" />
                 Export
@@ -105,27 +133,27 @@ const Orders = () => {
             </TabsList>
             
             <TabsContent value="all" className="mt-0">
-              <OrdersTable orders={filteredOrders || []} isLoading={isLoading} />
+              <OrdersTable orders={filteredOrders || []} isLoading={isLoading} onAddOrder={() => setAddDialogOpen(true)} />
             </TabsContent>
             
             <TabsContent value="pending" className="mt-0">
-              <OrdersTable orders={getOrdersByStatus('pending')} isLoading={isLoading} />
+              <OrdersTable orders={getOrdersByStatus('pending')} isLoading={isLoading} onAddOrder={() => setAddDialogOpen(true)} />
             </TabsContent>
             
             <TabsContent value="processing" className="mt-0">
-              <OrdersTable orders={getOrdersByStatus('processing')} isLoading={isLoading} />
+              <OrdersTable orders={getOrdersByStatus('processing')} isLoading={isLoading} onAddOrder={() => setAddDialogOpen(true)} />
             </TabsContent>
             
             <TabsContent value="shipped" className="mt-0">
-              <OrdersTable orders={getOrdersByStatus('shipped')} isLoading={isLoading} />
+              <OrdersTable orders={getOrdersByStatus('shipped')} isLoading={isLoading} onAddOrder={() => setAddDialogOpen(true)} />
             </TabsContent>
             
             <TabsContent value="delivered" className="mt-0">
-              <OrdersTable orders={getOrdersByStatus('delivered')} isLoading={isLoading} />
+              <OrdersTable orders={getOrdersByStatus('delivered')} isLoading={isLoading} onAddOrder={() => setAddDialogOpen(true)} />
             </TabsContent>
             
             <TabsContent value="cancelled" className="mt-0">
-              <OrdersTable orders={getOrdersByStatus('cancelled')} isLoading={isLoading} />
+              <OrdersTable orders={getOrdersByStatus('cancelled')} isLoading={isLoading} onAddOrder={() => setAddDialogOpen(true)} />
             </TabsContent>
           </Tabs>
         </main>
@@ -137,9 +165,10 @@ const Orders = () => {
 interface OrdersTableProps {
   orders: any[];
   isLoading: boolean;
+  onAddOrder: () => void;
 }
 
-const OrdersTable = ({ orders, isLoading }: OrdersTableProps) => {
+const OrdersTable = ({ orders, isLoading, onAddOrder }: OrdersTableProps) => {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -153,7 +182,7 @@ const OrdersTable = ({ orders, isLoading }: OrdersTableProps) => {
       <div className="flex justify-center items-center h-64 border rounded-lg bg-card">
         <div className="text-center">
           <p className="text-muted-foreground mb-2">No orders found</p>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={onAddOrder}>
             <Plus className="h-4 w-4 mr-2" />
             Create New Order
           </Button>
