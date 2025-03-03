@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -49,7 +48,6 @@ const AddOrderForm = ({ onSuccess }: { onSuccess?: () => void }) => {
     quantity: 1,
   });
 
-  // Fetch customers
   const { data: customers, isLoading: customersLoading } = useQuery({
     queryKey: ['customers'],
     queryFn: async () => {
@@ -71,7 +69,6 @@ const AddOrderForm = ({ onSuccess }: { onSuccess?: () => void }) => {
     },
   });
 
-  // Fetch products
   const { data: products, isLoading: productsLoading } = useQuery({
     queryKey: ['products'],
     queryFn: async () => {
@@ -114,7 +111,6 @@ const AddOrderForm = ({ onSuccess }: { onSuccess?: () => void }) => {
     const product = products?.find(p => p.id === currentItem.product_id);
     if (!product) return;
 
-    // Check if we have sufficient stock
     if (currentItem.quantity > product.stock) {
       toast({
         variant: "destructive",
@@ -124,17 +120,14 @@ const AddOrderForm = ({ onSuccess }: { onSuccess?: () => void }) => {
       return;
     }
 
-    // Check if product already exists in order
     const existingItemIndex = order.items.findIndex(
       item => item.product_id === currentItem.product_id
     );
 
     if (existingItemIndex >= 0) {
-      // Update existing item
       const updatedItems = [...order.items];
       const newQuantity = updatedItems[existingItemIndex].quantity + currentItem.quantity;
       
-      // Check if the total quantity would exceed stock
       if (newQuantity > product.stock) {
         toast({
           variant: "destructive",
@@ -152,7 +145,6 @@ const AddOrderForm = ({ onSuccess }: { onSuccess?: () => void }) => {
       
       setOrder(prev => ({ ...prev, items: updatedItems }));
     } else {
-      // Add new item
       const newItem: OrderItem = {
         product_id: product.id,
         product_name: product.name,
@@ -167,7 +159,6 @@ const AddOrderForm = ({ onSuccess }: { onSuccess?: () => void }) => {
       }));
     }
 
-    // Reset current item
     setCurrentItem({
       product_id: "",
       quantity: 1,
@@ -190,7 +181,6 @@ const AddOrderForm = ({ onSuccess }: { onSuccess?: () => void }) => {
     setError(null);
 
     try {
-      // Simple validation
       if (!order.customer_id) {
         throw new Error("Please select a customer");
       }
@@ -201,7 +191,6 @@ const AddOrderForm = ({ onSuccess }: { onSuccess?: () => void }) => {
 
       const total = calculateTotal();
 
-      // Start a transaction
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .insert({
@@ -215,7 +204,6 @@ const AddOrderForm = ({ onSuccess }: { onSuccess?: () => void }) => {
 
       if (orderError) throw orderError;
 
-      // Insert order items
       const orderItems = order.items.map(item => ({
         order_id: orderData.id,
         product_id: item.product_id,
@@ -231,22 +219,20 @@ const AddOrderForm = ({ onSuccess }: { onSuccess?: () => void }) => {
 
       if (itemsError) throw itemsError;
 
-      // Update product stock
       for (const item of order.items) {
         const { error: stockError } = await supabase.rpc('decrement', {
           x: item.quantity,
           column_name: 'stock',
           table_name: 'products',
           row_id: item.product_id,
-        });
+        } as any);
 
         if (stockError) {
           console.error("Error updating stock:", stockError);
-          // Instead of using RPC for now, use direct update
           const { error: fallbackError } = await supabase
             .from('products')
             .update({ 
-              stock: product => product.stock - item.quantity,
+              stock: supabase.sql`stock - ${item.quantity}`,
               last_updated: new Date().toISOString()
             })
             .eq('id', item.product_id);
@@ -257,23 +243,21 @@ const AddOrderForm = ({ onSuccess }: { onSuccess?: () => void }) => {
         }
       }
 
-      // Update customer stats
       const { error: customerError } = await supabase.rpc('add_amount', {
         base: 0,
         amount: total,
         column_name: 'total_spent',
         table_name: 'customers',
         row_id: order.customer_id,
-      });
+      } as any);
 
       if (customerError) {
         console.error("Error updating customer stats:", customerError);
-        // Use direct update as fallback
         const { error: fallbackError } = await supabase
           .from('customers')
           .update({ 
-            total_orders: customer => customer.total_orders + 1,
-            total_spent: customer => customer.total_spent + total
+            total_orders: supabase.sql`total_orders + 1`,
+            total_spent: supabase.sql`total_spent + ${total}`
           })
           .eq('id', order.customer_id);
 
@@ -287,7 +271,6 @@ const AddOrderForm = ({ onSuccess }: { onSuccess?: () => void }) => {
         description: `Order #${orderData.id.substring(0, 8)} has been created.`,
       });
 
-      // Reset form
       setOrder({
         customer_id: "",
         status: "pending",
