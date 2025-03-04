@@ -13,7 +13,8 @@ import {
   LifeBuoy,
   LogOut,
   Menu,
-  ChevronRight
+  ChevronRight,
+  Wallet
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { name: "Sales", path: "/sales", icon: ShoppingCart },
     { name: "Orders", path: "/orders", icon: ClipboardList },
     { name: "Analytics", path: "/analytics", icon: BarChart },
+    { name: "Cash Flow", path: "/cash-flow", icon: Wallet },
   ];
   
   const secondaryItems = [
