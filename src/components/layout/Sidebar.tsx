@@ -11,7 +11,9 @@ import {
   Home, 
   Settings, 
   LifeBuoy,
-  LogOut
+  LogOut,
+  Menu,
+  ChevronRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -27,6 +29,7 @@ interface SidebarProps {
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const location = useLocation();
   const { signOut, isAdmin } = useAuth();
+  const [collapsed, setCollapsed] = useState(false);
   
   const mainItems = [
     { name: "Dashboard", path: "/", icon: Home },
@@ -42,23 +45,38 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { name: "Help & Support", path: "/support", icon: LifeBuoy },
   ];
 
+  const toggleCollapse = () => {
+    setCollapsed(!collapsed);
+  };
+
   return (
     <aside
       className={cn(
-        "fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r bg-background transition-transform duration-300 ease-in-out",
-        isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+        "fixed inset-y-0 left-0 z-50 flex flex-col border-r bg-background transition-all duration-300 ease-in-out",
+        isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
+        collapsed ? "w-16" : "w-64"
       )}
     >
-      <div className="flex h-16 items-center gap-2 border-b px-6">
-        <div className="font-semibold text-xl text-primary">CustomerFlow</div>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={onClose}
-          className="absolute right-2 top-3 md:hidden"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </Button>
+      <div className="flex h-16 items-center gap-2 border-b px-4">
+        {!collapsed && <div className="font-semibold text-xl text-primary">CustomerFlow</div>}
+        <div className="flex items-center ml-auto">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={toggleCollapse}
+            className="md:flex hidden"
+          >
+            {collapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={onClose}
+            className="md:hidden"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+        </div>
       </div>
       
       <ScrollArea className="flex-1 py-4">
@@ -74,7 +92,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               )}
             >
               <item.icon className="h-5 w-5" />
-              <span>{item.name}</span>
+              {!collapsed && <span>{item.name}</span>}
             </Link>
           ))}
         </nav>
@@ -82,7 +100,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         <Separator className="my-4 mx-2" />
         
         <div className="px-2">
-          <p className="mb-2 px-4 text-xs font-medium text-muted-foreground">Settings</p>
+          {!collapsed && <p className="mb-2 px-4 text-xs font-medium text-muted-foreground">Settings</p>}
           <nav className="flex flex-col gap-2">
             {secondaryItems.map((item) => (
               <Link
@@ -95,7 +113,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 )}
               >
                 <item.icon className="h-5 w-5" />
-                <span>{item.name}</span>
+                {!collapsed && <span>{item.name}</span>}
               </Link>
             ))}
           </nav>
@@ -109,7 +127,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           onClick={() => signOut()}
         >
           <LogOut className="h-5 w-5" />
-          <span>Logout</span>
+          {!collapsed && <span>Logout</span>}
         </Button>
       </div>
     </aside>

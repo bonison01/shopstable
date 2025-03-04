@@ -1,6 +1,8 @@
 
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   BarChart3, 
   Users, 
@@ -32,9 +34,7 @@ import {
   Line
 } from "recharts";
 import { 
-  statsSummary, 
   recentActivity, 
-  orders, 
   salesData,
   topProducts
 } from "@/data/mockData";
@@ -55,26 +55,77 @@ const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
 const Index = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  const { data: dashboardData, isLoading } = useQuery({
+    queryKey: ['dashboard-data'],
+    queryFn: async () => {
+      // Get real data from the database
+      const { data: ordersData, error: ordersError } = await supabase
+        .from('orders')
+        .select('*');
+      
+      if (ordersError) {
+        console.error("Error fetching orders:", ordersError);
+        throw ordersError;
+      }
+
+      const { data: customersData, error: customersError } = await supabase
+        .from('customers')
+        .select('*');
+
+      if (customersError) {
+        console.error("Error fetching customers:", customersError);
+        throw customersError;
+      }
+
+      const { data: productsData, error: productsError } = await supabase
+        .from('products')
+        .select('*');
+
+      if (productsError) {
+        console.error("Error fetching products:", productsError);
+        throw productsError;
+      }
+
+      // Calculate total revenue
+      const totalRevenue = ordersData?.reduce((sum, order) => sum + (order.total || 0), 0) || 0;
+      
+      // Count low stock products
+      const lowStockProducts = productsData?.filter(product => (product.stock || 0) <= (product.threshold || 5)).length || 0;
+      
+      // Count pending orders
+      const pendingOrders = ordersData?.filter(order => order.status === 'pending').length || 0;
+
+      // Calculate order status distribution
+      const orderStats = ordersData?.reduce((acc, order) => {
+        acc[order.status] = (acc[order.status] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>) || {};
+
+      const orderStatusData = Object.entries(orderStats).map(([name, value]) => ({
+        name,
+        value,
+      }));
+
+      return {
+        totalCustomers: customersData?.length || 0,
+        totalProducts: productsData?.length || 0,
+        totalOrders: ordersData?.length || 0,
+        totalRevenue,
+        lowStockProducts,
+        pendingOrders,
+        orderStatusData
+      };
+    }
+  });
+
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };
 
-  // Calculate order status stats
-  const orderStats = orders.reduce((acc, order) => {
-    acc[order.status] = (acc[order.status] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-
-  const orderStatusData = Object.entries(orderStats).map(([name, value]) => ({
-    name,
-    value,
-  }));
-
-  // Calculate payment status stats
-  const paymentStats = orders.reduce((acc, order) => {
-    acc[order.paymentStatus] = (acc[order.paymentStatus] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+  // Calculate percentage increase trend (mock data for now)
+  const calculateTrend = () => {
+    return 12.5; // Example trend value
+  };
 
   return (
     <div className="flex min-h-screen bg-muted/40">
@@ -100,28 +151,28 @@ const Index = () => {
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8 animate-fade-in">
             <StatsCard
               title="Total Customers"
-              value={statsSummary.totalCustomers}
+              value={isLoading ? "-" : dashboardData?.totalCustomers || 0}
               icon={<Users className="h-5 w-5" />}
               trend={{ value: 12, isPositive: true }}
               className="stagger-delay-1"
             />
             <StatsCard
               title="Total Products"
-              value={statsSummary.totalProducts}
+              value={isLoading ? "-" : dashboardData?.totalProducts || 0}
               icon={<Package className="h-5 w-5" />}
-              description={`${statsSummary.lowStockProducts} items low in stock`}
+              description={`${isLoading ? "-" : dashboardData?.lowStockProducts || 0} items low in stock`}
               className="stagger-delay-2"
             />
             <StatsCard
               title="Total Orders"
-              value={statsSummary.totalOrders}
+              value={isLoading ? "-" : dashboardData?.totalOrders || 0}
               icon={<ShoppingCart className="h-5 w-5" />}
-              description={`${statsSummary.pendingOrders} pending orders`}
+              description={`${isLoading ? "-" : dashboardData?.pendingOrders || 0} pending orders`}
               className="stagger-delay-3"
             />
             <StatsCard
               title="Total Revenue"
-              value={formatCurrency(statsSummary.totalRevenue)}
+              value={isLoading ? "-" : formatCurrency(dashboardData?.totalRevenue || 0)}
               icon={<Banknote className="h-5 w-5" />}
               trend={{ value: 8.2, isPositive: true }}
               className="stagger-delay-4"
@@ -204,55 +255,60 @@ const Index = () => {
               </CardHeader>
               <CardContent>
                 <div className="h-[300px] flex items-center justify-center">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={orderStatusData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={80}
-                        paddingAngle={5}
-                        dataKey="value"
-                        label={({
-                          cx,
-                          cy,
-                          midAngle,
-                          innerRadius,
-                          outerRadius,
-                          value,
-                          index,
-                        }) => {
-                          const RADIAN = Math.PI / 180;
-                          const radius = 25 + innerRadius + (outerRadius - innerRadius);
-                          const x = cx + radius * Math.cos(-midAngle * RADIAN);
-                          const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                  {isLoading ? (
+                    <div className="animate-pulse">Loading order status data...</div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={dashboardData?.orderStatusData || []}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={80}
+                          paddingAngle={5}
+                          dataKey="value"
+                          label={({
+                            cx,
+                            cy,
+                            midAngle,
+                            innerRadius,
+                            outerRadius,
+                            value,
+                            index,
+                          }) => {
+                            const RADIAN = Math.PI / 180;
+                            const radius = 25 + innerRadius + (outerRadius - innerRadius);
+                            const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                            const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                            const name = dashboardData?.orderStatusData[index]?.name;
 
-                          return (
-                            <text
-                              x={x}
-                              y={y}
-                              textAnchor={x > cx ? "start" : "end"}
-                              dominantBaseline="central"
-                              fill="#888888"
-                              fontSize="12"
-                            >
-                              {orderStatusData[index].name}{" "}
-                              ({value})
-                            </text>
-                          );
-                        }}
-                      >
-                        {orderStatusData.map((entry, index) => (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={Object.values(orderStatusColors)[index % Object.values(orderStatusColors).length]}
-                          />
-                        ))}
-                      </Pie>
-                      <RechartsTooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
+                            return (
+                              <text
+                                x={x}
+                                y={y}
+                                textAnchor={x > cx ? "start" : "end"}
+                                dominantBaseline="central"
+                                fill="#888888"
+                                fontSize="12"
+                              >
+                                {name}{" "}
+                                ({value})
+                              </text>
+                            );
+                          }}
+                        >
+                          {(dashboardData?.orderStatusData || []).map((entry, index) => (
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={Object.values(orderStatusColors)[index % Object.values(orderStatusColors).length]}
+                            />
+                          ))}
+                        </Pie>
+                        <RechartsTooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  )}
                 </div>
               </CardContent>
             </Card>
