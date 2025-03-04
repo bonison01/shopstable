@@ -8,6 +8,11 @@ export interface OrderCreationResult {
   orderId?: string;
 }
 
+export interface OrderUpdateResult {
+  success: boolean;
+  error?: string;
+}
+
 export const createOrder = async (order: OrderFormState): Promise<OrderCreationResult> => {
   try {
     if (!order.customer_id) {
@@ -59,6 +64,29 @@ export const createOrder = async (order: OrderFormState): Promise<OrderCreationR
     return {
       success: false,
       error: err.message || "An error occurred while creating the order"
+    };
+  }
+};
+
+export const updateOrder = async (
+  orderId: string, 
+  data: { status?: string; payment_status?: string }
+): Promise<OrderUpdateResult> => {
+  try {
+    const { error } = await supabase
+      .from('orders')
+      .update(data)
+      .eq('id', orderId);
+      
+    if (error) throw error;
+    
+    return {
+      success: true
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err.message || "An error occurred while updating the order"
     };
   }
 };

@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatDate, getStatusColor } from "@/utils/format";
-import { FileText, Plus, Search } from "lucide-react";
+import { FileText, Plus, Search, Save, Check, X, Edit, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Dialog, 
@@ -21,12 +21,27 @@ import {
   DialogTrigger 
 } from "@/components/ui/dialog";
 import AddOrderForm from "@/components/forms/AddOrderForm";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+interface EditableOrderData {
+  id: string;
+  status: string;
+  payment_status: string;
+}
 
 const Orders = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const { toast } = useToast();
+  const [editingOrder, setEditingOrder] = useState<EditableOrderData | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const { data: orders, isLoading, error, refetch } = useQuery({
     queryKey: ['orders'],
@@ -74,6 +89,66 @@ const Orders = () => {
     return filteredOrders?.filter(order => order.status === status) || [];
   };
 
+  const startEditing = (order: any) => {
+    setEditingOrder({
+      id: order.id,
+      status: order.status,
+      payment_status: order.payment_status
+    });
+  };
+
+  const cancelEditing = () => {
+    setEditingOrder(null);
+  };
+
+  const updateOrder = async () => {
+    if (!editingOrder) return;
+    
+    setIsUpdating(true);
+    
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({
+          status: editingOrder.status,
+          payment_status: editingOrder.payment_status
+        })
+        .eq('id', editingOrder.id);
+        
+      if (error) {
+        throw error;
+      }
+      
+      toast({
+        title: "Order Updated",
+        description: `Order #${editingOrder.id.substring(0, 8)} has been updated successfully.`,
+      });
+      
+      refetch();
+      setEditingOrder(null);
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Update Failed",
+        description: error.message || "Failed to update order",
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleStatusChange = (value: string) => {
+    if (editingOrder) {
+      setEditingOrder({ ...editingOrder, status: value });
+    }
+  };
+
+  const handlePaymentStatusChange = (value: string) => {
+    if (editingOrder) {
+      setEditingOrder({ ...editingOrder, payment_status: value });
+    }
+  };
+
   return (
     <div className="flex min-h-screen bg-muted/40">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -82,7 +157,7 @@ const Orders = () => {
         <Navbar toggleSidebar={toggleSidebar} />
         
         <main className="flex-1 p-4 md:p-6 lg:p-8">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 fade-in">
             <div>
               <h1 className="text-3xl font-bold tracking-tight mb-1">Orders</h1>
               <p className="text-muted-foreground">Manage and track customer orders</p>
@@ -100,7 +175,7 @@ const Orders = () => {
               </div>
               <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button>
+                  <Button className="bg-primary hover:bg-primary/90">
                     <Plus className="h-4 w-4 mr-2" />
                     New Order
                   </Button>
@@ -122,7 +197,7 @@ const Orders = () => {
             </div>
           </div>
           
-          <Tabs defaultValue="all" className="w-full">
+          <Tabs defaultValue="all" className="w-full fade-in">
             <TabsList className="mb-6">
               <TabsTrigger value="all">All Orders</TabsTrigger>
               <TabsTrigger value="pending">Pending</TabsTrigger>
@@ -133,27 +208,93 @@ const Orders = () => {
             </TabsList>
             
             <TabsContent value="all" className="mt-0">
-              <OrdersTable orders={filteredOrders || []} isLoading={isLoading} onAddOrder={() => setAddDialogOpen(true)} />
+              <OrdersTable 
+                orders={filteredOrders || []} 
+                isLoading={isLoading} 
+                onAddOrder={() => setAddDialogOpen(true)}
+                editingOrder={editingOrder}
+                startEditing={startEditing}
+                cancelEditing={cancelEditing}
+                updateOrder={updateOrder}
+                isUpdating={isUpdating}
+                handleStatusChange={handleStatusChange}
+                handlePaymentStatusChange={handlePaymentStatusChange}
+              />
             </TabsContent>
             
             <TabsContent value="pending" className="mt-0">
-              <OrdersTable orders={getOrdersByStatus('pending')} isLoading={isLoading} onAddOrder={() => setAddDialogOpen(true)} />
+              <OrdersTable 
+                orders={getOrdersByStatus('pending')} 
+                isLoading={isLoading} 
+                onAddOrder={() => setAddDialogOpen(true)}
+                editingOrder={editingOrder}
+                startEditing={startEditing}
+                cancelEditing={cancelEditing}
+                updateOrder={updateOrder}
+                isUpdating={isUpdating}
+                handleStatusChange={handleStatusChange}
+                handlePaymentStatusChange={handlePaymentStatusChange}
+              />
             </TabsContent>
             
             <TabsContent value="processing" className="mt-0">
-              <OrdersTable orders={getOrdersByStatus('processing')} isLoading={isLoading} onAddOrder={() => setAddDialogOpen(true)} />
+              <OrdersTable 
+                orders={getOrdersByStatus('processing')} 
+                isLoading={isLoading} 
+                onAddOrder={() => setAddDialogOpen(true)}
+                editingOrder={editingOrder}
+                startEditing={startEditing}
+                cancelEditing={cancelEditing}
+                updateOrder={updateOrder}
+                isUpdating={isUpdating}
+                handleStatusChange={handleStatusChange}
+                handlePaymentStatusChange={handlePaymentStatusChange}
+              />
             </TabsContent>
             
             <TabsContent value="shipped" className="mt-0">
-              <OrdersTable orders={getOrdersByStatus('shipped')} isLoading={isLoading} onAddOrder={() => setAddDialogOpen(true)} />
+              <OrdersTable 
+                orders={getOrdersByStatus('shipped')} 
+                isLoading={isLoading} 
+                onAddOrder={() => setAddDialogOpen(true)}
+                editingOrder={editingOrder}
+                startEditing={startEditing}
+                cancelEditing={cancelEditing}
+                updateOrder={updateOrder}
+                isUpdating={isUpdating}
+                handleStatusChange={handleStatusChange}
+                handlePaymentStatusChange={handlePaymentStatusChange}
+              />
             </TabsContent>
             
             <TabsContent value="delivered" className="mt-0">
-              <OrdersTable orders={getOrdersByStatus('delivered')} isLoading={isLoading} onAddOrder={() => setAddDialogOpen(true)} />
+              <OrdersTable 
+                orders={getOrdersByStatus('delivered')} 
+                isLoading={isLoading} 
+                onAddOrder={() => setAddDialogOpen(true)}
+                editingOrder={editingOrder}
+                startEditing={startEditing}
+                cancelEditing={cancelEditing}
+                updateOrder={updateOrder}
+                isUpdating={isUpdating}
+                handleStatusChange={handleStatusChange}
+                handlePaymentStatusChange={handlePaymentStatusChange}
+              />
             </TabsContent>
             
             <TabsContent value="cancelled" className="mt-0">
-              <OrdersTable orders={getOrdersByStatus('cancelled')} isLoading={isLoading} onAddOrder={() => setAddDialogOpen(true)} />
+              <OrdersTable 
+                orders={getOrdersByStatus('cancelled')} 
+                isLoading={isLoading} 
+                onAddOrder={() => setAddDialogOpen(true)}
+                editingOrder={editingOrder}
+                startEditing={startEditing}
+                cancelEditing={cancelEditing}
+                updateOrder={updateOrder}
+                isUpdating={isUpdating}
+                handleStatusChange={handleStatusChange}
+                handlePaymentStatusChange={handlePaymentStatusChange}
+              />
             </TabsContent>
           </Tabs>
         </main>
@@ -166,13 +307,34 @@ interface OrdersTableProps {
   orders: any[];
   isLoading: boolean;
   onAddOrder: () => void;
+  editingOrder: EditableOrderData | null;
+  startEditing: (order: any) => void;
+  cancelEditing: () => void;
+  updateOrder: () => Promise<void>;
+  isUpdating: boolean;
+  handleStatusChange: (value: string) => void;
+  handlePaymentStatusChange: (value: string) => void;
 }
 
-const OrdersTable = ({ orders, isLoading, onAddOrder }: OrdersTableProps) => {
+const OrdersTable = ({ 
+  orders, 
+  isLoading, 
+  onAddOrder,
+  editingOrder,
+  startEditing,
+  cancelEditing,
+  updateOrder,
+  isUpdating,
+  handleStatusChange,
+  handlePaymentStatusChange
+}: OrdersTableProps) => {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-pulse">Loading orders...</div>
+        <div className="animate-pulse flex items-center">
+          <Loader2 className="h-6 w-6 animate-spin mr-2" />
+          Loading orders...
+        </div>
       </div>
     );
   }
@@ -192,10 +354,10 @@ const OrdersTable = ({ orders, isLoading, onAddOrder }: OrdersTableProps) => {
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="data-table-container fade-in">
       <table className="w-full border-collapse">
         <thead>
-          <tr className="border-b text-left">
+          <tr className="border-b text-left bg-muted/50">
             <th className="py-3 px-4 font-medium">Order ID</th>
             <th className="py-3 px-4 font-medium">Customer</th>
             <th className="py-3 px-4 font-medium">Date</th>
@@ -208,29 +370,97 @@ const OrdersTable = ({ orders, isLoading, onAddOrder }: OrdersTableProps) => {
         </thead>
         <tbody>
           {orders.map((order) => (
-            <tr key={order.id} className="border-b hover:bg-muted/50 transition-colors">
+            <tr key={order.id} className="border-b hover:bg-muted/40 transition-colors">
               <td className="py-3 px-4 font-medium">{order.id.substring(0, 8)}</td>
               <td className="py-3 px-4">{order.customers?.name || 'Unknown'}</td>
               <td className="py-3 px-4">{formatDate(order.date)}</td>
               <td className="py-3 px-4">
-                <Badge className={`${getStatusColor(order.status)} text-white`}>
-                  {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                </Badge>
+                {editingOrder && editingOrder.id === order.id ? (
+                  <Select 
+                    value={editingOrder.status} 
+                    onValueChange={handleStatusChange}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="processing">Processing</SelectItem>
+                      <SelectItem value="shipped">Shipped</SelectItem>
+                      <SelectItem value="delivered">Delivered</SelectItem>
+                      <SelectItem value="cancelled">Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Badge className={`${getStatusColor(order.status)} text-white`}>
+                    {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                  </Badge>
+                )}
               </td>
               <td className="py-3 px-4">{order.order_items?.length || 0}</td>
               <td className="py-3 px-4">
-                <Badge 
-                  variant={order.payment_status === 'paid' ? 'default' : 
-                           order.payment_status === 'pending' ? 'secondary' : 
-                           'destructive'}
-                >
-                  {order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1)}
-                </Badge>
+                {editingOrder && editingOrder.id === order.id ? (
+                  <Select 
+                    value={editingOrder.payment_status} 
+                    onValueChange={handlePaymentStatusChange}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select payment status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="paid">Paid</SelectItem>
+                      <SelectItem value="refunded">Refunded</SelectItem>
+                      <SelectItem value="failed">Failed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Badge 
+                    variant={order.payment_status === 'paid' ? 'default' : 
+                            order.payment_status === 'pending' ? 'secondary' : 
+                            'destructive'}
+                  >
+                    {order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1)}
+                  </Badge>
+                )}
               </td>
               <td className="py-3 px-4 text-right font-medium">{formatCurrency(order.total)}</td>
               <td className="py-3 px-4">
-                <Button variant="ghost" size="sm">View</Button>
-                <Button variant="ghost" size="sm">Edit</Button>
+                {editingOrder && editingOrder.id === order.id ? (
+                  <div className="flex space-x-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={updateOrder}
+                      disabled={isUpdating}
+                    >
+                      {isUpdating ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4" />
+                      )}
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={cancelEditing}
+                      disabled={isUpdating}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex space-x-2">
+                    <Button variant="ghost" size="sm" onClick={() => startEditing(order)}>
+                      <Edit className="h-4 w-4 mr-1" />
+                      Edit
+                    </Button>
+                    <Button variant="ghost" size="sm">
+                      <FileText className="h-4 w-4 mr-1" />
+                      View
+                    </Button>
+                  </div>
+                )}
               </td>
             </tr>
           ))}
