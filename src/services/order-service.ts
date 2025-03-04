@@ -66,27 +66,27 @@ export const createOrder = async (order: OrderFormState): Promise<OrderCreationR
 const updateProductStocks = async (items: OrderItem[]) => {
   for (const item of items) {
     try {
-      // Try to use RPC first
+      // First, we need to get the current product to update it
+      const { data: productData, error: fetchError } = await supabase
+        .from('products')
+        .select('stock')
+        .eq('id', item.product_id)
+        .single();
+        
+      if (fetchError) {
+        console.error("Error fetching product:", fetchError);
+        continue;
+      }
+        
+      // Try to use RPC but now without the id parameter which was causing the error
       const { error: rpcError } = await supabase.rpc('decrement', {
-        x: item.quantity,
-        id: item.product_id  // Make sure to pass the product_id
+        x: item.quantity
       });
 
       if (rpcError) {
         // If RPC fails, fall back to direct update
         console.error("Error using RPC to update stock:", rpcError);
         
-        const { data: productData, error: fetchError } = await supabase
-          .from('products')
-          .select('stock')
-          .eq('id', item.product_id)
-          .single();
-          
-        if (fetchError) {
-          console.error("Error fetching product:", fetchError);
-          continue;
-        }
-          
         const newStock = Math.max(0, (productData.stock || 0) - item.quantity);
         const { error: updateError } = await supabase
           .from('products')
@@ -108,40 +108,41 @@ const updateProductStocks = async (items: OrderItem[]) => {
 
 const updateCustomerStats = async (customerId: string, total: number) => {
   try {
-    // First try to update using RPC
+    // First get current customer data
+    const { data: customerData, error: fetchError } = await supabase
+      .from('customers')
+      .select('total_orders, total_spent')
+      .eq('id', customerId)
+      .single();
+      
+    if (fetchError) {
+      console.error("Error fetching customer:", fetchError);
+      return;
+    }
+    
+    // Fix RPC call by removing the id parameter
     const { error: rpcError } = await supabase.rpc('add_amount', {
-      base: 0,
-      amount: total,
-      id: customerId  // Make sure to pass the customer_id
+      base: customerData.total_spent || 0,
+      amount: total
     });
 
     if (rpcError) {
       // If RPC fails, fall back to direct update
       console.error("Error using RPC to update customer stats:", rpcError);
       
-      const { data: customerData, error: fetchError } = await supabase
+      const newTotalOrders = (customerData.total_orders || 0) + 1;
+      const newTotalSpent = (customerData.total_spent || 0) + total;
+      
+      const { error: updateError } = await supabase
         .from('customers')
-        .select('total_orders, total_spent')
-        .eq('id', customerId)
-        .single();
+        .update({ 
+          total_orders: newTotalOrders,
+          total_spent: newTotalSpent
+        })
+        .eq('id', customerId);
         
-      if (fetchError) {
-        console.error("Error fetching customer:", fetchError);
-      } else {
-        const newTotalOrders = (customerData.total_orders || 0) + 1;
-        const newTotalSpent = (customerData.total_spent || 0) + total;
-        
-        const { error: updateError } = await supabase
-          .from('customers')
-          .update({ 
-            total_orders: newTotalOrders,
-            total_spent: newTotalSpent
-          })
-          .eq('id', customerId);
-          
-        if (updateError) {
-          console.error("Error updating customer stats:", updateError);
-        }
+      if (updateError) {
+        console.error("Error updating customer stats:", updateError);
       }
     }
   } catch (error) {
