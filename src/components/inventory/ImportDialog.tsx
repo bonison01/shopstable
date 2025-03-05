@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -100,104 +101,138 @@ const ImportDialog = ({ open, onOpenChange, onSuccess }: ImportDialogProps) => {
     }
 
     setIsImporting(true);
+    console.log("Starting import process...");
 
     try {
       const reader = new FileReader();
       
       reader.onload = async (e) => {
-        const data = new Uint8Array(e.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: 'array' });
-        
-        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-        
-        const jsonData = XLSX.utils.sheet_to_json(worksheet) as ExcelRow[];
-        
-        let successes = 0;
-        let failures = 0;
-        
-        for (const item of jsonData) {
-          try {
-            const product = {
-              name: item.name || item.Name || '',
-              sku: item.sku || item.SKU || '',
-              category: 'Default', // Using default category
-              category_type: item.category_type || item.Category_type || null,
-              price: parseFloat(String(item.price || item.Price || 0)),
-              wholesale_price: item.wholesale_price ? parseFloat(String(item.wholesale_price)) : null,
-              retail_price: item.retail_price ? parseFloat(String(item.retail_price)) : null,
-              trainer_price: item.trainer_price ? parseFloat(String(item.trainer_price)) : null,
-              purchased_price: item.purchased_price ? parseFloat(String(item.purchased_price)) : null,
-              stock: parseInt(String(item.stock || item.Stock || 0)),
-              threshold: parseInt(String(item.threshold || item.Threshold || 5)),
-              description: item.description || item.Description || null,
-              image_url: item.image_url || null
-            };
-            
-            if (!product.name || !product.sku) {
-              throw new Error(`Missing required fields for product: ${product.name || 'Unknown'}`);
-            }
-            
-            const { data: existingProduct } = await supabase
-              .from('products')
-              .select('id')
-              .eq('sku', product.sku)
-              .maybeSingle();
-            
-            if (existingProduct) {
-              const { error } = await supabase
-                .from('products')
-                .update(product)
-                .eq('id', existingProduct.id);
-              
-              if (error) throw error;
-            } else {
-              const { error } = await supabase
-                .from('products')
-                .insert(product);
-              
-              if (error) throw error;
-            }
-            
-            successes++;
-          } catch (itemError) {
-            console.error("Error processing item:", item, itemError);
-            failures++;
-          }
-        }
-        
-        if (successes > 0) {
-          toast({
-            title: "Import Successful",
-            description: `Successfully processed ${successes} products. ${failures > 0 ? `Failed to process ${failures} products.` : ''}`,
-          });
+        try {
+          console.log("File read successfully");
+          const data = new Uint8Array(e.target?.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: 'array' });
           
-          // Explicitly call onSuccess to refresh the inventory list
-          onSuccess();
-        } else if (failures > 0) {
+          const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+          
+          const jsonData = XLSX.utils.sheet_to_json(worksheet) as ExcelRow[];
+          console.log("Parsed data:", jsonData);
+          
+          let successes = 0;
+          let failures = 0;
+          
+          for (const item of jsonData) {
+            try {
+              const product = {
+                name: item.name || item.Name || '',
+                sku: item.sku || item.SKU || '',
+                category: 'Default', // Using default category
+                category_type: item.category_type || item.Category_type || null,
+                price: parseFloat(String(item.price || item.Price || 0)),
+                wholesale_price: item.wholesale_price ? parseFloat(String(item.wholesale_price)) : null,
+                retail_price: item.retail_price ? parseFloat(String(item.retail_price)) : null,
+                trainer_price: item.trainer_price ? parseFloat(String(item.trainer_price)) : null,
+                purchased_price: item.purchased_price ? parseFloat(String(item.purchased_price)) : null,
+                stock: parseInt(String(item.stock || item.Stock || 0)),
+                threshold: parseInt(String(item.threshold || item.Threshold || 5)),
+                description: item.description || item.Description || null,
+                image_url: item.image_url || null
+              };
+              
+              console.log("Processing product:", product);
+              
+              if (!product.name || !product.sku) {
+                throw new Error(`Missing required fields for product: ${product.name || 'Unknown'}`);
+              }
+              
+              const { data: existingProduct } = await supabase
+                .from('products')
+                .select('id')
+                .eq('sku', product.sku)
+                .maybeSingle();
+              
+              if (existingProduct) {
+                console.log("Updating existing product with ID:", existingProduct.id);
+                const { error } = await supabase
+                  .from('products')
+                  .update(product)
+                  .eq('id', existingProduct.id);
+                
+                if (error) {
+                  console.error("Error updating product:", error);
+                  throw error;
+                }
+              } else {
+                console.log("Inserting new product");
+                const { error } = await supabase
+                  .from('products')
+                  .insert(product);
+                
+                if (error) {
+                  console.error("Error inserting product:", error);
+                  throw error;
+                }
+              }
+              
+              successes++;
+            } catch (itemError) {
+              console.error("Error processing item:", item, itemError);
+              failures++;
+            }
+          }
+          
+          console.log(`Import completed: ${successes} successes, ${failures} failures`);
+          
+          if (successes > 0) {
+            toast({
+              title: "Import Successful",
+              description: `Successfully processed ${successes} products. ${failures > 0 ? `Failed to process ${failures} products.` : ''}`,
+            });
+            
+            // Explicitly call onSuccess to refresh the inventory list
+            if (onSuccess) {
+              console.log("Calling onSuccess callback to refresh data");
+              onSuccess();
+            }
+          } else if (failures > 0) {
+            toast({
+              variant: "destructive",
+              title: "Import Failed",
+              description: `Failed to process ${failures} products. Please check the file format.`,
+            });
+          } else {
+            toast({
+              variant: "destructive",
+              title: "Import Failed",
+              description: "No products found in the uploaded file.",
+            });
+          }
+        } catch (parseError) {
+          console.error("Error parsing Excel file:", parseError);
           toast({
             variant: "destructive",
             title: "Import Failed",
-            description: `Failed to process ${failures} products. Please check the file format.`,
+            description: "Failed to parse the Excel file. Please check the file format.",
           });
-        } else {
-          toast({
-            variant: "destructive",
-            title: "Import Failed",
-            description: "No products found in the uploaded file.",
-          });
+        } finally {
+          onOpenChange(false);
+          setImportFile(null);
+          setIsImporting(false);
         }
-        
-        onOpenChange(false);
-        setImportFile(null);
-        setIsImporting(false);
       };
       
-      reader.onerror = () => {
-        throw new Error("Failed to read the file");
+      reader.onerror = (error) => {
+        console.error("Error reading file:", error);
+        toast({
+          variant: "destructive",
+          title: "Import Failed",
+          description: "Failed to read the file",
+        });
+        setIsImporting(false);
       };
       
       reader.readAsArrayBuffer(importFile);
     } catch (err: any) {
+      console.error("Unhandled error during import:", err);
       toast({
         variant: "destructive",
         title: "Import Failed",
@@ -290,6 +325,7 @@ const ImportDialog = ({ open, onOpenChange, onSuccess }: ImportDialogProps) => {
           </Button>
           <Button onClick={handleImport} disabled={!importFile || isImporting}>
             {isImporting ? "Importing..." : "Import"}
+            {!isImporting && <Upload className="ml-2 h-4 w-4" />}
           </Button>
         </DialogFooter>
       </DialogContent>

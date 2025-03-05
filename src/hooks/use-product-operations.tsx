@@ -28,20 +28,27 @@ export function useProductOperations(refetchProducts: () => void) {
   const { toast } = useToast();
 
   const handleAddProduct = () => {
+    console.log("Product added - refetching products");
     refetchProducts();
   };
 
   const handleEditProduct = () => {
+    console.log("Product edited - refetching products");
     refetchProducts();
   };
 
   const handleDeleteSuccess = () => {
+    console.log("Product deleted - refetching products");
     setSelectedProduct(null);
     refetchProducts();
   };
 
   const handleImportSuccess = () => {
-    refetchProducts();
+    console.log("Products imported - refetching products");
+    // Force a refetch to update the products list after import
+    setTimeout(() => {
+      refetchProducts();
+    }, 500); // Small delay to ensure DB operations complete
   };
 
   const handleExportToExcel = (products: Product[]) => {

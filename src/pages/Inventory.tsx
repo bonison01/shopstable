@@ -59,12 +59,14 @@ const Inventory = () => {
   const { data: products, isLoading, error, refetch } = useQuery({
     queryKey: ['products'],
     queryFn: async () => {
+      console.log("Fetching products from database...");
       const { data, error } = await supabase
         .from('products')
         .select('*')
         .order('name');
       
       if (error) {
+        console.error("Error fetching products:", error);
         toast({
           variant: "destructive",
           title: "Error fetching products",
@@ -73,6 +75,7 @@ const Inventory = () => {
         throw error;
       }
       
+      console.log("Products fetched successfully:", data?.length);
       return data || [];
     },
   });
