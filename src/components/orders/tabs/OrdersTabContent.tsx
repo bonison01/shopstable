@@ -1,7 +1,6 @@
-
 import { TabsContent } from "@/components/ui/tabs";
 import { OrdersTable } from "../OrdersTable";
-import { EditableOrderData } from "@/hooks/use-orders";
+import { EditableOrderData } from "@/hooks/orders/types";
 
 interface OrdersTabContentProps {
   value: string;
