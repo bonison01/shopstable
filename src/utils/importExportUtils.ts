@@ -77,14 +77,29 @@ export const processExcelData = async (
         const jsonData = XLSX.utils.sheet_to_json(worksheet) as ExcelRow[];
         console.log("Parsed data:", jsonData);
         
+        if (!jsonData || jsonData.length === 0) {
+          throw new Error("No data found in the Excel file");
+        }
+        
         let successes = 0;
         let failures = 0;
         
         for (const item of jsonData) {
           try {
+            // Extract the product name and SKU (required fields)
+            const name = item.name || item.Name;
+            const sku = item.sku || item.SKU;
+            
+            if (!name || !sku) {
+              console.error("Missing required field (name or SKU):", item);
+              failures++;
+              continue;
+            }
+            
+            // Prepare the product object with proper type conversions
             const product = {
-              name: item.name || item.Name || '',
-              sku: item.sku || item.SKU || '',
+              name: name,
+              sku: sku,
               category: 'Default', // Using default category
               category_type: item.category_type || item.Category_type || null,
               price: parseFloat(String(item.price || item.Price || 0)),
@@ -100,40 +115,40 @@ export const processExcelData = async (
             
             console.log("Processing product:", product);
             
-            if (!product.name || !product.sku) {
-              throw new Error(`Missing required fields for product: ${product.name || 'Unknown'}`);
-            }
-            
-            const { data: existingProduct } = await supabase
+            // Check if product with this SKU already exists
+            const { data: existingProduct, error: queryError } = await supabase
               .from('products')
               .select('id')
               .eq('sku', product.sku)
               .maybeSingle();
             
+            if (queryError) {
+              console.error("Error querying existing product:", queryError);
+              throw queryError;
+            }
+            
+            let result;
+            
             if (existingProduct) {
               console.log("Updating existing product with ID:", existingProduct.id);
-              const { error } = await supabase
+              result = await supabase
                 .from('products')
                 .update(product)
                 .eq('id', existingProduct.id);
-              
-              if (error) {
-                console.error("Error updating product:", error);
-                throw error;
-              }
             } else {
               console.log("Inserting new product");
-              const { error } = await supabase
+              result = await supabase
                 .from('products')
                 .insert(product);
-              
-              if (error) {
-                console.error("Error inserting product:", error);
-                throw error;
-              }
+            }
+            
+            if (result.error) {
+              console.error("Error processing product:", result.error);
+              throw result.error;
             }
             
             successes++;
+            console.log("Successfully processed product:", name);
           } catch (itemError) {
             console.error("Error processing item:", item, itemError);
             failures++;
@@ -145,22 +160,16 @@ export const processExcelData = async (
         if (successes > 0) {
           toast({
             title: "Import Successful",
-            description: `Successfully processed ${successes} products. ${failures > 0 ? `Failed to process ${failures} products.` : ''}`,
+            description: `Successfully imported ${successes} products. ${failures > 0 ? `Failed to process ${failures} products.` : ''}`,
           });
           
-          // Explicitly call onSuccess to refresh the inventory list
+          // Call onSuccess to refresh the inventory list
           onSuccess();
-        } else if (failures > 0) {
-          toast({
-            variant: "destructive",
-            title: "Import Failed",
-            description: `Failed to process ${failures} products. Please check the file format.`,
-          });
         } else {
           toast({
             variant: "destructive",
             title: "Import Failed",
-            description: "No products found in the uploaded file.",
+            description: `Failed to process all ${failures} products. Please check the file format.`,
           });
         }
       } catch (parseError) {
@@ -171,8 +180,8 @@ export const processExcelData = async (
           description: "Failed to parse the Excel file. Please check the file format.",
         });
       } finally {
-        onOpenChange(false);
         setIsImporting(false);
+        onOpenChange(false);
       }
     };
     

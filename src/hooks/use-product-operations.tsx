@@ -45,10 +45,10 @@ export function useProductOperations(refetchProducts: () => void) {
 
   const handleImportSuccess = () => {
     console.log("Products imported - refetching products");
-    // Force a refetch to update the products list after import
+    // Force a refetch with a small delay to ensure DB operations complete
     setTimeout(() => {
       refetchProducts();
-    }, 500); // Small delay to ensure DB operations complete
+    }, 1000);
   };
 
   const handleExportToExcel = (products: Product[]) => {
