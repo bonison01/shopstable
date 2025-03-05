@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -73,6 +72,10 @@ const Orders = () => {
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
+  };
+
+  const closeSidebar = () => {
+    setSidebarOpen(false);
   };
 
   const handleAddOrder = () => {
@@ -151,7 +154,7 @@ const Orders = () => {
 
   return (
     <div className="flex min-h-screen bg-muted/40">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
       
       <div className="flex flex-1 flex-col">
         <Navbar toggleSidebar={toggleSidebar} />

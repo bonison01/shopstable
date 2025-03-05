@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { 
   BarChart, 
@@ -32,6 +32,25 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { signOut, isAdmin } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   
+  // Add click handler to close sidebar when clicking outside on mobile
+  useEffect(() => {
+    const handleBodyClick = (e: MouseEvent) => {
+      // Check if we're on mobile by looking at the sidebar's translate state
+      if (isOpen && window.innerWidth < 768) {
+        // Use event delegation to see if the click was outside the sidebar
+        const sidebar = document.getElementById('main-sidebar');
+        if (sidebar && !sidebar.contains(e.target as Node)) {
+          onClose();
+        }
+      }
+    };
+    
+    document.addEventListener('click', handleBodyClick);
+    return () => {
+      document.removeEventListener('click', handleBodyClick);
+    };
+  }, [isOpen, onClose]);
+  
   const mainItems = [
     { name: "Dashboard", path: "/", icon: Home },
     { name: "Customers", path: "/customers", icon: Users },
@@ -53,6 +72,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   return (
     <aside
+      id="main-sidebar"
       className={cn(
         "fixed inset-y-0 left-0 z-50 flex flex-col border-r bg-background transition-all duration-300 ease-in-out",
         isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",

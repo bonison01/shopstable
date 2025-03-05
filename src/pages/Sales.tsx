@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,11 +19,17 @@ const Sales = () => {
   const [period, setPeriod] = useState("week");
   const { toast } = useToast();
 
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
+  };
+  
+  const closeSidebar = () => {
+    setSidebarOpen(false);
+  };
+
   const { data: salesData, isLoading: salesLoading } = useQuery({
     queryKey: ['sales-data', period],
     queryFn: async () => {
-      // In a real app, we would fetch real data from the backend
-      // For now, we'll generate sample data
       const daysInPeriod = period === 'week' ? 7 : period === 'month' ? 30 : 90;
       const labels = [];
       const data = [];
@@ -66,7 +71,6 @@ const Sales = () => {
         throw error;
       }
       
-      // Calculate summary statistics
       const totalSales = orders?.reduce((sum, order) => sum + (order.total || 0), 0) || 0;
       const averageOrderValue = orders?.length ? totalSales / orders.length : 0;
       const totalOrders = orders?.length || 0;
@@ -75,14 +79,10 @@ const Sales = () => {
         totalSales,
         averageOrderValue,
         totalOrders,
-        conversionRate: 15.8, // Example value
+        conversionRate: 15.8,
       };
     },
   });
-
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
 
   const calculateTrend = () => {
     if (!salesData || salesData.length < 2) return 0;
@@ -97,7 +97,7 @@ const Sales = () => {
 
   return (
     <div className="flex min-h-screen bg-muted/40">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
       
       <div className="flex flex-1 flex-col">
         <Navbar toggleSidebar={toggleSidebar} />

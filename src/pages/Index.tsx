@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -71,7 +70,6 @@ const Index = () => {
   const { data: dashboardData, isLoading } = useQuery({
     queryKey: ['dashboard-data'],
     queryFn: async () => {
-      // Get real data from the database
       const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
         .select('*');
@@ -99,16 +97,12 @@ const Index = () => {
         throw productsError;
       }
 
-      // Calculate total revenue
       const totalRevenue = ordersData?.reduce((sum, order) => sum + (order.total || 0), 0) || 0;
       
-      // Count low stock products
       const lowStockProducts = productsData?.filter(product => (product.stock || 0) <= (product.threshold || 5)).length || 0;
       
-      // Count pending orders
       const pendingOrders = ordersData?.filter(order => order.status === 'pending').length || 0;
 
-      // Calculate order status distribution
       const orderStats = ordersData?.reduce((acc, order) => {
         acc[order.status] = (acc[order.status] || 0) + 1;
         return acc;
@@ -132,10 +126,8 @@ const Index = () => {
   });
 
   useEffect(() => {
-    // Get recent activity data from orders, customer creation, etc.
     const fetchRecentActivity = async () => {
       try {
-        // Fetch recent orders
         const { data: recentOrders, error: ordersError } = await supabase
           .from('orders')
           .select('id, date, total, status, customer_id, customers(name)')
@@ -144,7 +136,6 @@ const Index = () => {
         
         if (ordersError) throw ordersError;
 
-        // Fetch recent customers
         const { data: recentCustomers, error: customersError } = await supabase
           .from('customers')
           .select('id, name, created_at')
@@ -153,10 +144,8 @@ const Index = () => {
         
         if (customersError) throw customersError;
 
-        // Combine and format data
         const activities: RecentActivity[] = [];
 
-        // Add orders as activities
         recentOrders?.forEach((order: any) => {
           activities.push({
             id: order.id,
@@ -167,7 +156,6 @@ const Index = () => {
           });
         });
 
-        // Add new customers as activities
         recentCustomers?.forEach((customer: any) => {
           activities.push({
             id: customer.id,
@@ -178,7 +166,6 @@ const Index = () => {
           });
         });
 
-        // Sort by date (newest first) and take top 5
         activities.sort((a, b) => 
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
@@ -189,17 +176,14 @@ const Index = () => {
       }
     };
 
-    // Get top selling products data
     const fetchTopProducts = async () => {
       try {
-        // First, get all order items
         const { data: orderItems, error: orderItemsError } = await supabase
           .from('order_items')
           .select('product_id, product_name, quantity');
         
         if (orderItemsError) throw orderItemsError;
         
-        // Calculate sales per product
         const productSales: Record<string, { id: string, name: string, quantity: number }> = {};
         
         orderItems?.forEach((item: any) => {
@@ -216,12 +200,10 @@ const Index = () => {
           productSales[item.product_id].quantity += item.quantity;
         });
         
-        // Convert to array and sort by quantity
         const sortedProducts = Object.values(productSales)
           .sort((a, b) => b.quantity - a.quantity)
           .slice(0, 5);
         
-        // Calculate percentage for chart display
         const totalSales = sortedProducts.reduce((sum, product) => sum + product.quantity, 0);
         
         const formattedTopProducts = sortedProducts.map(product => ({
@@ -237,13 +219,11 @@ const Index = () => {
       }
     };
 
-    // Get sales data for the chart
     const fetchSalesData = async () => {
       try {
-        // Get orders from the last 12 months
         const endDate = new Date();
         const startDate = new Date();
-        startDate.setMonth(startDate.getMonth() - 11); // 12 months including current month
+        startDate.setMonth(startDate.getMonth() - 11);
         
         const { data: orders, error } = await supabase
           .from('orders')
@@ -253,10 +233,8 @@ const Index = () => {
         
         if (error) throw error;
         
-        // Aggregate sales by month
         const monthlySales: Record<string, number> = {};
         
-        // Initialize all months with 0
         for (let i = 0; i < 12; i++) {
           const date = new Date();
           date.setMonth(date.getMonth() - i);
@@ -264,7 +242,6 @@ const Index = () => {
           monthlySales[monthKey] = 0;
         }
         
-        // Add actual sales data
         orders?.forEach((order: any) => {
           const orderDate = new Date(order.date);
           const monthKey = orderDate.toLocaleString('en-US', { month: 'short', year: 'numeric' });
@@ -274,10 +251,9 @@ const Index = () => {
           }
         });
         
-        // Convert to array format for chart
         const salesChartData = Object.entries(monthlySales)
           .map(([month, sales]) => ({ month, sales }))
-          .reverse(); // Chronological order
+          .reverse();
         
         setSalesData(salesChartData);
       } catch (error) {
@@ -294,21 +270,24 @@ const Index = () => {
     setSidebarOpen(!sidebarOpen);
   };
 
-  // Calculate percentage increase trend
+  const closeSidebar = () => {
+    setSidebarOpen(false);
+  };
+
   const calculateTrend = () => {
     if (salesData.length < 2) return 0;
     
     const currentMonth = salesData[salesData.length - 1].sales;
     const previousMonth = salesData[salesData.length - 2].sales;
     
-    if (previousMonth === 0) return 100; // Avoid division by zero
+    if (previousMonth === 0) return 100;
     
     return ((currentMonth - previousMonth) / previousMonth * 100).toFixed(1);
   };
 
   return (
     <div className="flex min-h-screen bg-muted/40">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
       
       <div className="flex flex-1 flex-col">
         <Navbar toggleSidebar={toggleSidebar} />

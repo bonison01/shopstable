@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,25 +47,15 @@ const Inventory = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [toolbarsVisible, setToolbarsVisible] = useState(true);
   const { toast } = useToast();
   
-  // Handle global click to hide toolbars
-  useEffect(() => {
-    const handleBodyClick = () => {
-      if (toolbarsVisible) {
-        setToolbarsVisible(false);
-      } else {
-        setToolbarsVisible(true);
-      }
-    };
-    
-    document.body.addEventListener('click', handleBodyClick);
-    
-    return () => {
-      document.body.removeEventListener('click', handleBodyClick);
-    };
-  }, [toolbarsVisible]);
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
+  };
+  
+  const closeSidebar = () => {
+    setSidebarOpen(false);
+  };
   
   const { data: products, isLoading, error, refetch } = useQuery({
     queryKey: ['products'],
@@ -104,10 +93,6 @@ const Inventory = () => {
     return matchesSearch && matchesStock;
   });
 
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
-
   const handleAddProduct = () => {
     setAddDialogOpen(false);
     refetch();
@@ -143,29 +128,25 @@ const Inventory = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-muted/40" onClick={() => setToolbarsVisible(!toolbarsVisible)}>
-      <Sidebar isOpen={sidebarOpen && toolbarsVisible} onClose={() => setSidebarOpen(false)} />
+    <div className="flex min-h-screen bg-muted/40">
+      <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
       
       <div className="flex flex-1 flex-col">
         <Navbar toggleSidebar={toggleSidebar} />
         
         <main className="flex-1 p-4 md:p-6 lg:p-8">
-          {toolbarsVisible && (
-            <>
-              <InventoryHeader 
-                onAddProduct={() => setAddDialogOpen(true)}
-                onExportToExcel={handleExportToExcel}
-                onImportExcel={() => setImportDialogOpen(true)}
-              />
-              
-              <SearchAndFilters 
-                searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
-                stockFilter={stockFilter}
-                setStockFilter={setStockFilter}
-              />
-            </>
-          )}
+          <InventoryHeader 
+            onAddProduct={() => setAddDialogOpen(true)}
+            onExportToExcel={handleExportToExcel}
+            onImportExcel={() => setImportDialogOpen(true)}
+          />
+          
+          <SearchAndFilters 
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            stockFilter={stockFilter}
+            setStockFilter={setStockFilter}
+          />
           
           {isLoading ? (
             <div className="flex justify-center items-center h-64">
