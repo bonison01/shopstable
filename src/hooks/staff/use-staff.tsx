@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { StaffMember, EditableStaffData } from "./types";
+import { StaffMember, EditableStaffData, CompanyAccess } from "./types";
 import { useAuth } from "@/contexts/auth/useAuth";
 
 export const useStaff = () => {
@@ -46,7 +46,7 @@ export const useStaff = () => {
 
       const { data: companyAccessData, error: companyError } = await supabase
         .from("company_access")
-        .select("*")
+        .select("id, business_name, owner_id, staff_id, created_at")
         .in("staff_id", staffIds);
 
       if (companyError) {
@@ -61,7 +61,7 @@ export const useStaff = () => {
         
         return {
           ...staff,
-          company_access: accessRecords.length > 0 ? accessRecords : undefined,
+          company_access: accessRecords.length > 0 ? accessRecords as CompanyAccess[] : undefined,
         };
       });
       

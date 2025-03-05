@@ -6,6 +6,7 @@ export type CompanyAccessType = {
   business_name: string;
   owner_id: string;
   staff_id: string;
+  created_at?: string;
 };
 
 export type UserProfile = {

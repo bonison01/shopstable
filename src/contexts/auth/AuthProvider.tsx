@@ -54,7 +54,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Now get company access with staff ID
       const { data: accessData, error: accessError } = await supabase
         .from('company_access')
-        .select('*')
+        .select('id, business_name, owner_id, staff_id, created_at')
         .eq('staff_id', staffData.id);
 
       if (accessError) {
@@ -63,7 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      setStaffCompanyAccess(accessData);
+      setStaffCompanyAccess(accessData as CompanyAccessType[]);
     } catch (error) {
       console.error('Error in fetchCompanyAccess:', error);
       setStaffCompanyAccess(null);

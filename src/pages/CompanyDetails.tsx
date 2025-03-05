@@ -9,6 +9,7 @@ import { useSidebar } from "@/hooks/use-sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Building2, Users, Boxes, CreditCard, Calendar } from "lucide-react";
 import { format } from "date-fns";
+import { CompanyAccessType } from "@/contexts/auth/types";
 
 const CompanyDetails = () => {
   const { companyId } = useParams<{ companyId: string }>();
@@ -20,12 +21,12 @@ const CompanyDetails = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("company_access")
-        .select("*")
+        .select("id, business_name, owner_id, staff_id, created_at")
         .eq("id", companyId)
         .single();
 
       if (error) throw error;
-      return data;
+      return data as CompanyAccessType;
     },
     enabled: !!companyId
   });
@@ -50,17 +51,15 @@ const CompanyDetails = () => {
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["company-stats", company?.owner_id],
     queryFn: async () => {
-      const [customers, products, orders] = await Promise.all([
+      const [customersResponse, productsResponse, ordersResponse] = await Promise.all([
         supabase
           .from("customers")
           .select("count")
-          .eq("user_id", company?.owner_id)
-          .single(),
+          .eq("user_id", company?.owner_id),
         supabase
           .from("products")
           .select("count")
-          .eq("user_id", company?.owner_id)
-          .single(),
+          .eq("user_id", company?.owner_id),
         supabase
           .from("orders")
           .select("count, created_at")
@@ -69,14 +68,17 @@ const CompanyDetails = () => {
           .limit(1)
       ]);
 
-      const latestOrderDate = orders.data && orders.data.length > 0 
-        ? orders.data[0].created_at 
+      const customersCount = customersResponse.count || 0;
+      const productsCount = productsResponse.count || 0;
+      const ordersCount = ordersResponse.count || 0;
+      const latestOrderDate = ordersResponse.data && ordersResponse.data.length > 0 
+        ? ordersResponse.data[0].created_at 
         : null;
 
       return {
-        customers: customers.data?.count || 0,
-        products: products.data?.count || 0,
-        orders: orders.data?.count || 0,
+        customers: customersCount,
+        products: productsCount,
+        orders: ordersCount,
         latestOrderDate
       };
     },
@@ -131,7 +133,7 @@ const CompanyDetails = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats?.customers}</div>
+                <div className="text-2xl font-bold">{stats?.customers || 0}</div>
               </CardContent>
             </Card>
 
@@ -143,7 +145,7 @@ const CompanyDetails = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats?.products}</div>
+                <div className="text-2xl font-bold">{stats?.products || 0}</div>
               </CardContent>
             </Card>
 
@@ -155,7 +157,7 @@ const CompanyDetails = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats?.orders}</div>
+                <div className="text-2xl font-bold">{stats?.orders || 0}</div>
               </CardContent>
             </Card>
 

@@ -42,6 +42,38 @@ export type Database = {
         }
         Relationships: []
       }
+      company_access: {
+        Row: {
+          business_name: string
+          created_at: string | null
+          id: string
+          owner_id: string
+          staff_id: string
+        }
+        Insert: {
+          business_name: string
+          created_at?: string | null
+          id?: string
+          owner_id: string
+          staff_id: string
+        }
+        Update: {
+          business_name?: string
+          created_at?: string | null
+          id?: string
+          owner_id?: string
+          staff_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_access_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           address: string | null
