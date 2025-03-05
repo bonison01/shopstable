@@ -9,7 +9,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/utils/format";
-import { Package, Plus, Search, AlertTriangle, CheckCircle, XCircle, Edit, Trash } from "lucide-react";
+import { 
+  Package, 
+  Plus, 
+  Search, 
+  AlertTriangle, 
+  CheckCircle, 
+  XCircle, 
+  Edit, 
+  Trash, 
+  FileSpreadsheet,
+  Download,
+  Upload
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Dialog, 
@@ -22,6 +34,7 @@ import {
   DialogClose
 } from "@/components/ui/dialog";
 import AddProductForm from "@/components/forms/AddProductForm";
+import * as XLSX from 'xlsx';
 
 const Inventory = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -30,7 +43,10 @@ const Inventory = () => {
   const [stockFilter, setStockFilter] = useState("all");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
   const { toast } = useToast();
   
   const { data: products, isLoading, error, refetch } = useQuery({
@@ -126,6 +142,169 @@ const Inventory = () => {
     }
   };
 
+  // Export inventory to Excel
+  const handleExportToExcel = () => {
+    try {
+      // Create worksheet with all product data
+      const worksheet = XLSX.utils.json_to_sheet(products || []);
+      
+      // Create workbook and add the worksheet
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Inventory");
+      
+      // Generate Excel file and trigger download
+      XLSX.writeFile(workbook, "inventory_export.xlsx");
+      
+      toast({
+        title: "Export Successful",
+        description: "Inventory has been exported to Excel",
+      });
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Export Failed",
+        description: err.message || "Failed to export inventory",
+      });
+    }
+  };
+
+  // Handle file selection for import
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setImportFile(e.target.files[0]);
+    }
+  };
+
+  // Import inventory from Excel
+  const handleImportFromExcel = async () => {
+    if (!importFile) {
+      toast({
+        variant: "destructive",
+        title: "Import Failed",
+        description: "Please select a file to import",
+      });
+      return;
+    }
+
+    setIsImporting(true);
+
+    try {
+      // Read the Excel file
+      const reader = new FileReader();
+      
+      reader.onload = async (e) => {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        
+        // Get the first worksheet
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        
+        // Convert to JSON
+        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+        
+        // Process and validate each product
+        let successes = 0;
+        let failures = 0;
+        
+        for (const item of jsonData) {
+          try {
+            // Map Excel columns to database fields
+            const product = {
+              name: item.name || item.Name,
+              sku: item.sku || item.SKU,
+              category: item.category || item.Category,
+              category_type: item.category_type || item.category_type || null,
+              price: parseFloat(item.price || item.Price || 0),
+              wholesale_price: parseFloat(item.wholesale_price || item.wholesale_price || 0) || null,
+              retail_price: parseFloat(item.retail_price || item.retail_price || 0) || null,
+              trainer_price: parseFloat(item.trainer_price || item.trainer_price || 0) || null,
+              purchased_price: parseFloat(item.purchased_price || item.purchased_price || 0) || null,
+              stock: parseInt(item.stock || item.Stock || 0),
+              threshold: parseInt(item.threshold || item.Threshold || 5),
+              description: item.description || item.Description || null,
+              image_url: item.image_url || item.image_url || null
+            };
+            
+            // Validate required fields
+            if (!product.name || !product.sku || !product.category) {
+              throw new Error(`Missing required fields for product: ${product.name || 'Unknown'}`);
+            }
+            
+            // Check if product exists by SKU
+            const { data: existingProduct } = await supabase
+              .from('products')
+              .select('id')
+              .eq('sku', product.sku)
+              .maybeSingle();
+            
+            if (existingProduct) {
+              // Update existing product
+              const { error } = await supabase
+                .from('products')
+                .update(product)
+                .eq('id', existingProduct.id);
+              
+              if (error) throw error;
+            } else {
+              // Insert new product
+              const { error } = await supabase
+                .from('products')
+                .insert(product);
+              
+              if (error) throw error;
+            }
+            
+            successes++;
+          } catch (itemError) {
+            console.error("Error processing item:", item, itemError);
+            failures++;
+          }
+        }
+        
+        // Show results
+        if (successes > 0) {
+          toast({
+            title: "Import Results",
+            description: `Successfully processed ${successes} products. ${failures > 0 ? `Failed to process ${failures} products.` : ''}`,
+          });
+          
+          // Refresh product list
+          refetch();
+        } else if (failures > 0) {
+          toast({
+            variant: "destructive",
+            title: "Import Failed",
+            description: `Failed to process ${failures} products. Please check the file format.`,
+          });
+        } else {
+          toast({
+            variant: "destructive",
+            title: "Import Failed",
+            description: "No products found in the uploaded file.",
+          });
+        }
+        
+        // Close dialog and reset state
+        setImportDialogOpen(false);
+        setImportFile(null);
+        setIsImporting(false);
+      };
+      
+      reader.onerror = () => {
+        throw new Error("Failed to read the file");
+      };
+      
+      reader.readAsArrayBuffer(importFile);
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Import Failed",
+        description: err.message || "Failed to import inventory",
+      });
+      setIsImporting(false);
+    }
+  };
+
   return (
     <div className="flex min-h-screen bg-muted/40">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -139,7 +318,7 @@ const Inventory = () => {
               <h1 className="text-3xl font-bold tracking-tight mb-1">Inventory</h1>
               <p className="text-muted-foreground">Manage your product inventory</p>
             </div>
-            <div className="flex gap-2 mt-4 sm:mt-0">
+            <div className="flex flex-wrap gap-2 mt-4 sm:mt-0">
               <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
                 <DialogTrigger asChild>
                   <Button>
@@ -155,6 +334,55 @@ const Inventory = () => {
                     </DialogDescription>
                   </DialogHeader>
                   <AddProductForm onSuccess={handleAddProduct} />
+                </DialogContent>
+              </Dialog>
+              
+              <Button variant="outline" onClick={handleExportToExcel}>
+                <Download className="h-4 w-4 mr-2" />
+                Export Excel
+              </Button>
+              
+              <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline">
+                    <Upload className="h-4 w-4 mr-2" />
+                    Import Excel
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Import Inventory from Excel</DialogTitle>
+                    <DialogDescription>
+                      Upload an Excel file to import or update products. The file should contain columns for product details.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="excel-file">Excel File</Label>
+                      <Input 
+                        id="excel-file" 
+                        type="file" 
+                        accept=".xlsx,.xls"
+                        onChange={handleFileChange}
+                      />
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      <p className="font-medium mb-1">Required columns:</p>
+                      <ul className="list-disc pl-5 space-y-1">
+                        <li>name (Product Name)</li>
+                        <li>sku (SKU)</li>
+                        <li>category (Category)</li>
+                      </ul>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setImportDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleImportFromExcel} disabled={!importFile || isImporting}>
+                      {isImporting ? "Importing..." : "Import"}
+                    </Button>
+                  </DialogFooter>
                 </DialogContent>
               </Dialog>
             </div>
@@ -253,6 +481,12 @@ const Inventory = () => {
                           <span className="text-muted-foreground">Category:</span>
                           <span className="font-medium">{product.category}</span>
                         </div>
+                        {product.category_type && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Type:</span>
+                            <span className="font-medium">{product.category_type}</span>
+                          </div>
+                        )}
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Price:</span>
                           <span className="font-medium">{formatCurrency(product.price)}</span>

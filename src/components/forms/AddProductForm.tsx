@@ -23,6 +23,16 @@ const productCategories = [
   "Other"
 ];
 
+const categoryTypes = [
+  "Protein",
+  "Gainer",
+  "Creatine",
+  "Glutamine",
+  "Fish Oil",
+  "Multi",
+  "Others"
+];
+
 const AddProductForm = ({ onSuccess }: { onSuccess?: () => void }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +41,12 @@ const AddProductForm = ({ onSuccess }: { onSuccess?: () => void }) => {
   const [product, setProduct] = useState({
     name: "",
     category: "",
+    category_type: "",
     price: "",
+    wholesale_price: "",
+    retail_price: "",
+    trainer_price: "",
+    purchased_price: "",
     stock: "0",
     threshold: "5",
     sku: "",
@@ -69,13 +84,24 @@ const AddProductForm = ({ onSuccess }: { onSuccess?: () => void }) => {
         throw new Error("Stock must be a non-negative number");
       }
 
+      // Process other price fields
+      const wholesalePrice = product.wholesale_price ? parseFloat(product.wholesale_price) : null;
+      const retailPrice = product.retail_price ? parseFloat(product.retail_price) : null;
+      const trainerPrice = product.trainer_price ? parseFloat(product.trainer_price) : null;
+      const purchasedPrice = product.purchased_price ? parseFloat(product.purchased_price) : null;
+
       // Insert to Supabase
       const { data, error } = await supabase
         .from('products')
         .insert({
           name: product.name,
           category: product.category,
+          category_type: product.category_type || null,
           price: numericPrice,
+          wholesale_price: wholesalePrice,
+          retail_price: retailPrice,
+          trainer_price: trainerPrice,
+          purchased_price: purchasedPrice,
           stock: numericStock,
           threshold: parseInt(product.threshold),
           sku: product.sku,
@@ -95,7 +121,12 @@ const AddProductForm = ({ onSuccess }: { onSuccess?: () => void }) => {
       setProduct({
         name: "",
         category: "",
+        category_type: "",
         price: "",
+        wholesale_price: "",
+        retail_price: "",
+        trainer_price: "",
+        purchased_price: "",
         stock: "0",
         threshold: "5",
         sku: "",
@@ -160,6 +191,25 @@ const AddProductForm = ({ onSuccess }: { onSuccess?: () => void }) => {
         </div>
         
         <div className="space-y-2">
+          <Label htmlFor="category_type">Category Type</Label>
+          <Select 
+            value={product.category_type} 
+            onValueChange={(value) => handleSelectChange("category_type", value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select category type" />
+            </SelectTrigger>
+            <SelectContent>
+              {categoryTypes.map(type => (
+                <SelectItem key={type} value={type}>
+                  {type}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="space-y-2">
           <Label htmlFor="price">Price ($) *</Label>
           <Input 
             id="price" 
@@ -171,6 +221,62 @@ const AddProductForm = ({ onSuccess }: { onSuccess?: () => void }) => {
             onChange={handleChange} 
             placeholder="0.00"
             required
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="wholesale_price">Wholesale Price ($)</Label>
+          <Input 
+            id="wholesale_price" 
+            name="wholesale_price" 
+            type="number" 
+            min="0.01" 
+            step="0.01" 
+            value={product.wholesale_price} 
+            onChange={handleChange} 
+            placeholder="0.00"
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="retail_price">Retail Price ($)</Label>
+          <Input 
+            id="retail_price" 
+            name="retail_price" 
+            type="number" 
+            min="0.01" 
+            step="0.01" 
+            value={product.retail_price} 
+            onChange={handleChange} 
+            placeholder="0.00"
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="trainer_price">Trainer Price ($)</Label>
+          <Input 
+            id="trainer_price" 
+            name="trainer_price" 
+            type="number" 
+            min="0.01" 
+            step="0.01" 
+            value={product.trainer_price} 
+            onChange={handleChange} 
+            placeholder="0.00"
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="purchased_price">Purchased Price ($)</Label>
+          <Input 
+            id="purchased_price" 
+            name="purchased_price" 
+            type="number" 
+            min="0.01" 
+            step="0.01" 
+            value={product.purchased_price} 
+            onChange={handleChange} 
+            placeholder="0.00"
           />
         </div>
         
