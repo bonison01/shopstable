@@ -29,7 +29,7 @@ export const createOrder = async (order: OrderFormState): Promise<OrderCreationR
     let paymentAmount = null;
     if (order.payment_status === 'paid') {
       paymentAmount = total;
-    } else if (order.payment_status === 'partial' && order.payment_amount) {
+    } else if (order.payment_status === 'partial' && order.payment_amount !== undefined) {
       if (order.payment_amount <= 0) {
         throw new Error("Payment amount must be greater than zero");
       }

@@ -59,6 +59,11 @@ const AddOrderForm = ({ onSuccess }: { onSuccess?: () => void }) => {
     setIsSubmitting(true);
     setError(null);
 
+    // Add payment_amount for 'paid' status
+    if (order.payment_status === 'paid') {
+      order.payment_amount = calculateTotal();
+    }
+
     const result = await createOrder(order);
     
     if (result.success) {

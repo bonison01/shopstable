@@ -33,6 +33,7 @@ export interface OrderFormState {
   customer_id: string;
   status: string;
   payment_status: string;
+  payment_amount?: number;
   items: OrderItem[];
 }
 
