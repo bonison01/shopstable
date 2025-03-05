@@ -44,9 +44,9 @@ export const StatsCard = ({
               "text-xs font-medium mr-1",
               trend.isPositive ? "text-green-500" : "text-red-500"
             )}>
-              {trend.isPositive ? "↑" : "↓"} {Math.abs(trend.value)}%
+              {trend.isPositive ? "↑" : "↓"} {Math.abs(trend.value).toFixed(1)}%
             </span>
-            <span className="text-xs text-muted-foreground">vs last month</span>
+            <span className="text-xs text-muted-foreground">vs last period</span>
           </div>
         )}
       </div>

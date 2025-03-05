@@ -8,6 +8,9 @@ interface CashFlowStatsProps {
   totalExpenses: number;
   netCashFlow: number;
   transactionCount: number;
+  incomeTrend?: number;
+  expensesTrend?: number;
+  netCashFlowTrend?: number;
   isLoading: boolean;
 }
 
@@ -16,6 +19,9 @@ export const CashFlowStats = ({
   totalExpenses,
   netCashFlow,
   transactionCount,
+  incomeTrend = 8.4,
+  expensesTrend = 5.6,
+  netCashFlowTrend = 12.3,
   isLoading
 }: CashFlowStatsProps) => {
   return (
@@ -24,21 +30,21 @@ export const CashFlowStats = ({
         title="Total Income"
         value={formatCurrency(isLoading ? 0 : totalIncome || 0)}
         icon={<ArrowUpRight className="h-5 w-5" />}
-        trend={{ value: 8.4, isPositive: true }}
+        trend={{ value: incomeTrend, isPositive: true }}
         className="stagger-delay-1"
       />
       <StatsCard
         title="Total Expenses"
         value={formatCurrency(isLoading ? 0 : totalExpenses || 0)}
         icon={<ArrowDownRight className="h-5 w-5" />}
-        trend={{ value: 5.6, isPositive: false }}
+        trend={{ value: expensesTrend, isPositive: false }}
         className="stagger-delay-2"
       />
       <StatsCard
         title="Net Cash Flow"
         value={formatCurrency(isLoading ? 0 : netCashFlow || 0)}
         icon={<Wallet className="h-5 w-5" />}
-        trend={{ value: 12.3, isPositive: true }}
+        trend={{ value: netCashFlowTrend, isPositive: true }}
         className="stagger-delay-3"
       />
       <StatsCard
