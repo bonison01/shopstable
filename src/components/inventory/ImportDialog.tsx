@@ -172,6 +172,7 @@ const ImportDialog = ({ open, onOpenChange, onSuccess }: ImportDialogProps) => {
             description: `Successfully processed ${successes} products. ${failures > 0 ? `Failed to process ${failures} products.` : ''}`,
           });
           
+          // Explicitly call onSuccess to refresh the inventory list
           onSuccess();
         } else if (failures > 0) {
           toast({

@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+
+import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -48,6 +49,7 @@ const Inventory = () => {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const { toast } = useToast();
+  const mainContentRef = useRef<HTMLDivElement>(null);
   
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
@@ -77,6 +79,21 @@ const Inventory = () => {
       return data || [];
     },
   });
+
+  // Close sidebar when clicking outside on mobile
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (sidebarOpen && mainContentRef.current && 
+          mainContentRef.current.contains(event.target as Node)) {
+        closeSidebar();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [sidebarOpen]);
 
   const filteredProducts = products?.filter(product => {
     const matchesSearch = 
@@ -127,11 +144,16 @@ const Inventory = () => {
     refetch();
   };
 
+  const handleImportSuccess = () => {
+    // Make sure to refresh the data after successful import
+    refetch();
+  };
+
   return (
     <div className="flex min-h-screen bg-muted/40">
       <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
       
-      <div className="flex flex-1 flex-col">
+      <div className="flex flex-1 flex-col" ref={mainContentRef}>
         <Navbar toggleSidebar={toggleSidebar} />
         
         <main className="flex-1 p-4 md:p-6 lg:p-8">
@@ -225,7 +247,7 @@ const Inventory = () => {
           <ImportDialog 
             open={importDialogOpen}
             onOpenChange={setImportDialogOpen}
-            onSuccess={refetch}
+            onSuccess={handleImportSuccess}
           />
         </main>
       </div>
