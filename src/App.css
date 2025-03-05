@@ -22,6 +22,11 @@ body {
 .content-area {
   flex: 1;
   padding: 1.5rem;
+  transition: margin-left 0.3s ease;
+}
+
+.content-transition {
+  transition: all 0.3s ease;
 }
 
 .card-hover {
@@ -199,4 +204,19 @@ body {
 
 .sidebar-expanded {
   width: 16rem;
+}
+
+/* Responsive layout transitions */
+@media (min-width: 768px) {
+  .layout-with-sidebar {
+    transition: margin-left 0.3s ease-in-out;
+  }
+  
+  .layout-with-sidebar.sidebar-collapsed {
+    margin-left: 5rem;
+  }
+  
+  .layout-with-sidebar.sidebar-expanded {
+    margin-left: 16rem;
+  }
 }

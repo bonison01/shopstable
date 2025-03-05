@@ -14,12 +14,14 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
+import { cn } from "@/lib/utils";
 
 interface NavbarProps {
   toggleSidebar: () => void;
+  isSidebarCollapsed: boolean;
 }
 
-export function Navbar({ toggleSidebar }: NavbarProps) {
+export function Navbar({ toggleSidebar, isSidebarCollapsed }: NavbarProps) {
   const [searchValue, setSearchValue] = useState("");
   const { user, profile, signOut } = useAuth();
 
@@ -44,7 +46,10 @@ export function Navbar({ toggleSidebar }: NavbarProps) {
 
   return (
     <header 
-      className="sticky top-0 z-30 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+      className={cn(
+        "sticky top-0 z-30 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-all duration-300 ease-in-out",
+        isSidebarCollapsed ? "md:ml-16" : "md:ml-64"
+      )}
       onClick={handleNavbarClick}
     >
       <div className="container flex h-16 items-center px-4">

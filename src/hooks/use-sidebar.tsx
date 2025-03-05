@@ -3,6 +3,7 @@ import { useState, useEffect, RefObject } from "react";
 
 export function useSidebar() {
   const [isOpen, setIsOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
 
   const toggle = () => {
     setIsOpen(!isOpen);
@@ -10,6 +11,10 @@ export function useSidebar() {
 
   const close = () => {
     setIsOpen(false);
+  };
+
+  const toggleCollapse = () => {
+    setCollapsed(!collapsed);
   };
 
   // Setup a global click handler to close the sidebar when clicking anywhere
@@ -44,6 +49,8 @@ export function useSidebar() {
     isOpen,
     toggle,
     close,
-    setupOutsideClickHandler
+    setupOutsideClickHandler,
+    collapsed,
+    toggleCollapse
   };
 }

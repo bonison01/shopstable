@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import AddProductForm from "@/components/forms/AddProductForm";
 import EditProductForm from "@/components/forms/EditProductForm";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
 
 // Import refactored components
 import ProductCard from "@/components/inventory/ProductCard";
@@ -52,8 +53,7 @@ const Inventory = () => {
   const mainContentRef = useRef<HTMLDivElement>(null);
   
   // Custom hooks
-  const { isOpen: sidebarOpen, toggle: toggleSidebar, close: closeSidebar, setupOutsideClickHandler } = useSidebar();
-  setupOutsideClickHandler(mainContentRef);
+  const { isOpen: sidebarOpen, toggle: toggleSidebar, close: closeSidebar, setupOutsideClickHandler, collapsed: sidebarCollapsed, toggleCollapse } = useSidebar();
   
   // Fetch products data
   const { data: products, isLoading, error, refetch } = useQuery({
@@ -101,10 +101,21 @@ const Inventory = () => {
 
   return (
     <div className="flex min-h-screen bg-muted/40">
-      <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
+      <Sidebar 
+        isOpen={sidebarOpen} 
+        onClose={closeSidebar} 
+        collapsed={sidebarCollapsed} 
+        onToggleCollapse={toggleCollapse}
+      />
       
-      <div className="flex flex-1 flex-col" ref={mainContentRef}>
-        <Navbar toggleSidebar={toggleSidebar} />
+      <div className={cn(
+        "flex flex-1 flex-col transition-all duration-300 ease-in-out",
+        sidebarCollapsed ? "md:ml-16" : "md:ml-64"
+      )} ref={mainContentRef}>
+        <Navbar 
+          toggleSidebar={toggleSidebar} 
+          isSidebarCollapsed={sidebarCollapsed}
+        />
         
         <main className="flex-1 p-4 md:p-6 lg:p-8">
           <InventoryHeader 

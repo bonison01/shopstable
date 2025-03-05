@@ -25,12 +25,13 @@ import { useAuth } from "@/contexts/AuthContext";
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
+  collapsed: boolean;
+  onToggleCollapse: () => void;
 }
 
-export function Sidebar({ isOpen, onClose }: SidebarProps) {
+export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: SidebarProps) {
   const location = useLocation();
   const { signOut, isAdmin } = useAuth();
-  const [collapsed, setCollapsed] = useState(false);
   
   // Prevent sidebar clicks from propagating to the global click handler
   const handleSidebarClick = (e: React.MouseEvent) => {
@@ -52,10 +53,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { name: "Help & Support", path: "/support", icon: LifeBuoy },
   ];
 
-  const toggleCollapse = () => {
-    setCollapsed(!collapsed);
-  };
-
   return (
     <aside
       id="main-sidebar"
@@ -72,7 +69,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           <Button 
             variant="ghost" 
             size="icon" 
-            onClick={toggleCollapse}
+            onClick={onToggleCollapse}
             className="md:flex hidden"
           >
             {collapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
