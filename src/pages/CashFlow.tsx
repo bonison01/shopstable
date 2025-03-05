@@ -14,7 +14,7 @@ import { StatsCard } from "@/components/ui/StatsCard";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { useSidebar } from "@/hooks/use-sidebar";
-import { cn } from "@/utils/cn";
+import { cn } from "@/lib/utils";
 
 const CashFlow = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);

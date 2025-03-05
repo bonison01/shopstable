@@ -36,7 +36,7 @@ import { formatCurrency, formatDate } from "@/utils/format";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useSidebar } from "@/hooks/use-sidebar";
-import { cn } from "@/utils/cn";
+import { cn } from "@/lib/utils";
 
 interface RecentActivity {
   id: string;

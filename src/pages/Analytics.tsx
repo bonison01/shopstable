@@ -10,7 +10,7 @@ import { BarChart3, ArrowRight } from "lucide-react";
 import { StatsCard } from "@/components/ui/StatsCard";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/hooks/use-sidebar";
-import { cn } from "@/utils/cn";
+import { cn } from "@/lib/utils";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
 
