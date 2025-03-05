@@ -25,12 +25,24 @@ export const createOrder = async (order: OrderFormState): Promise<OrderCreationR
 
     const total = order.items.reduce((sum, item) => sum + item.subtotal, 0);
 
+    // Check if payment_amount exists and is valid
+    let paymentAmount = null;
+    if (order.payment_status === 'paid') {
+      paymentAmount = total;
+    } else if (order.payment_status === 'partial' && order.payment_amount) {
+      if (order.payment_amount <= 0) {
+        throw new Error("Payment amount must be greater than zero");
+      }
+      paymentAmount = Math.min(order.payment_amount, total);
+    }
+
     const { data: orderData, error: orderError } = await supabase
       .from('orders')
       .insert({
         customer_id: order.customer_id,
         status: order.status,
         payment_status: order.payment_status,
+        payment_amount: paymentAmount,
         total: total,
       })
       .select()
@@ -73,6 +85,11 @@ export const updateOrder = async (
   data: { status?: string; payment_status?: string; payment_amount?: number | null }
 ): Promise<OrderUpdateResult> => {
   try {
+    // Ensure payment amount is positive if provided
+    if (data.payment_amount !== undefined && data.payment_amount !== null && data.payment_amount <= 0) {
+      throw new Error("Payment amount must be greater than zero");
+    }
+    
     const { error } = await supabase
       .from('orders')
       .update(data)

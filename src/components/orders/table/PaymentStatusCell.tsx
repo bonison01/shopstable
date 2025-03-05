@@ -60,11 +60,14 @@ export function PaymentStatusCell({
               value={paymentAmount || ""}
               onChange={(e) => handlePaymentAmountChange(e.target.value)}
               className="w-full"
-              min={0}
+              min={0.01}
               max={total}
               step={0.01}
             />
             <p className="text-xs text-muted-foreground mt-1">
+              Due: {formatCurrency(calculateDueAmount())}
+            </p>
+            <p className="text-xs text-muted-foreground">
               This payment will be recorded in the cash flow system
             </p>
           </div>

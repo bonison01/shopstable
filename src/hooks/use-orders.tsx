@@ -106,8 +106,8 @@ export const useOrders = () => {
 
   const handlePaymentAmountChange = (value: string) => {
     if (editingOrder) {
-      // Ensure the payment amount doesn't exceed the total
-      const numValue = parseFloat(value) || 0;
+      // Ensure the payment amount is positive and doesn't exceed the total
+      const numValue = Math.max(0.01, parseFloat(value) || 0);
       const validValue = Math.min(numValue, editingOrder.total || 0);
       
       setEditingOrder({ 
@@ -135,6 +135,10 @@ export const useOrders = () => {
       
       // Include payment_amount only for partial payments
       if (editingOrder.payment_status === 'partial' && editingOrder.payment_amount !== undefined) {
+        // Ensure amount is positive
+        if (editingOrder.payment_amount <= 0) {
+          throw new Error("Payment amount must be greater than zero");
+        }
         updateData.payment_amount = editingOrder.payment_amount;
       } else if (editingOrder.payment_status === 'paid') {
         // For paid status, set payment_amount to total
