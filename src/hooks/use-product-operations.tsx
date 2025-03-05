@@ -48,11 +48,20 @@ export function useProductOperations(refetchProducts: () => void) {
     // Force a refetch with a small delay to ensure DB operations complete
     setTimeout(() => {
       refetchProducts();
-    }, 1000);
+    }, 1500); // Increased delay to ensure all DB operations complete
   };
 
   const handleExportToExcel = (products: Product[]) => {
     try {
+      if (!products || products.length === 0) {
+        toast({
+          variant: "destructive",
+          title: "Export Failed",
+          description: "No products to export",
+        });
+        return;
+      }
+      
       const worksheet = XLSX.utils.json_to_sheet(products || []);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Inventory");

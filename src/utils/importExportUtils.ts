@@ -25,6 +25,25 @@ export interface ExcelRow {
   image_url?: string;
 }
 
+// Required fields that must be present in the Excel file
+const REQUIRED_FIELDS = ['name', 'sku'];
+
+// All supported fields including aliases
+const SUPPORTED_FIELDS = [
+  'name', 'Name',
+  'sku', 'SKU',
+  'category_type', 'Category_type',
+  'price', 'Price',
+  'wholesale_price',
+  'retail_price',
+  'trainer_price',
+  'purchased_price',
+  'stock', 'Stock',
+  'threshold', 'Threshold',
+  'description', 'Description',
+  'image_url'
+];
+
 export const createSampleTemplate = () => {
   // Create a sample template with headers
   const worksheet = XLSX.utils.aoa_to_sheet([
@@ -53,6 +72,40 @@ export const createSampleTemplate = () => {
   XLSX.writeFile(workbook, 'inventory_import_template.xlsx');
 };
 
+// Validates if the Excel data has the required structure
+const validateExcelStructure = (jsonData: ExcelRow[]): { valid: boolean; missingFields: string[] } => {
+  if (!jsonData || jsonData.length === 0) {
+    return { valid: false, missingFields: ['No data found in Excel file'] };
+  }
+
+  // Check for required fields in the first row as sample
+  const firstRow = jsonData[0];
+  const missingFields: string[] = [];
+  
+  // Check for name field (required)
+  if (!firstRow.name && !firstRow.Name) {
+    missingFields.push('name or Name');
+  }
+  
+  // Check for SKU field (required)
+  if (!firstRow.sku && !firstRow.SKU) {
+    missingFields.push('sku or SKU');
+  }
+  
+  return { 
+    valid: missingFields.length === 0,
+    missingFields 
+  };
+};
+
+// Returns true if at least one field in the Excel matches supported fields
+const hasMatchingFields = (jsonData: ExcelRow[]): boolean => {
+  if (!jsonData || jsonData.length === 0) return false;
+  
+  const firstRow = jsonData[0];
+  return SUPPORTED_FIELDS.some(field => field in firstRow);
+};
+
 export const processExcelData = async (
   file: File, 
   setIsImporting: (isImporting: boolean) => void,
@@ -77,8 +130,16 @@ export const processExcelData = async (
         const jsonData = XLSX.utils.sheet_to_json(worksheet) as ExcelRow[];
         console.log("Parsed data:", jsonData);
         
-        if (!jsonData || jsonData.length === 0) {
-          throw new Error("No data found in the Excel file");
+        // Validate the Excel structure
+        const { valid, missingFields } = validateExcelStructure(jsonData);
+        
+        if (!valid) {
+          throw new Error(`Invalid Excel structure. Missing required fields: ${missingFields.join(', ')}`);
+        }
+        
+        // Check if there are any matching fields at all
+        if (!hasMatchingFields(jsonData)) {
+          throw new Error("The Excel file doesn't contain any of the supported fields. Please use the sample template as a reference.");
         }
         
         let successes = 0;
@@ -172,12 +233,12 @@ export const processExcelData = async (
             description: `Failed to process all ${failures} products. Please check the file format.`,
           });
         }
-      } catch (parseError) {
+      } catch (parseError: any) {
         console.error("Error parsing Excel file:", parseError);
         toast({
           variant: "destructive",
           title: "Import Failed",
-          description: "Failed to parse the Excel file. Please check the file format.",
+          description: parseError.message || "Failed to parse the Excel file. Please check the file format.",
         });
       } finally {
         setIsImporting(false);
@@ -205,4 +266,15 @@ export const processExcelData = async (
     });
     setIsImporting(false);
   }
+};
+
+// Update this to provide more detailed feedback about the expected format
+export const getImportFormatHelp = (): string => {
+  return `
+    Required format:
+    - Excel file (.xlsx or .xls)
+    - Must contain 'name' and 'sku' columns (case insensitive)
+    - Other supported columns: category_type, price, wholesale_price, retail_price, 
+      trainer_price, purchased_price, stock, threshold, description, image_url
+  `;
 };

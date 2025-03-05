@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-// Import the new components
+// Import the components
 import FileUploadSection from "./import/FileUploadSection";
 import ColumnMappingGuide from "./import/ColumnMappingGuide";
 import { processExcelData } from "@/utils/importExportUtils";
@@ -54,8 +54,15 @@ const ImportDialog = ({ open, onOpenChange, onSuccess }: ImportDialogProps) => {
     );
   };
 
+  const resetDialog = () => {
+    setImportFile(null);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(newOpen) => {
+      if (!newOpen) resetDialog();
+      onOpenChange(newOpen);
+    }}>
       <DialogContent className="sm:max-w-[700px] max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Import Inventory from Excel</DialogTitle>
@@ -65,8 +72,11 @@ const ImportDialog = ({ open, onOpenChange, onSuccess }: ImportDialogProps) => {
         </DialogHeader>
         
         <ScrollArea className="h-[calc(90vh-200px)] pr-4">
-          <div className="space-y-4 py-4 pr-2">
-            <FileUploadSection onFileChange={handleFileChange} />
+          <div className="space-y-6 py-4 pr-2">
+            <FileUploadSection 
+              onFileChange={handleFileChange}
+              selectedFile={importFile}
+            />
             <ColumnMappingGuide />
           </div>
         </ScrollArea>

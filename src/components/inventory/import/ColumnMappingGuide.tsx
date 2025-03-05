@@ -1,14 +1,22 @@
 
 import React from "react";
-import { Info } from "lucide-react";
+import { Info, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const ColumnMappingGuide = () => {
   return (
-    <div className="text-sm space-y-2">
+    <div className="text-sm space-y-3">
       <div className="flex items-center text-primary">
         <Info className="h-4 w-4 mr-1" />
         <span className="font-semibold">Column Mapping Guide</span>
       </div>
+      
+      <Alert variant="destructive" className="mb-4">
+        <AlertCircle className="h-4 w-4 mr-2" />
+        <AlertDescription>
+          Excel files must contain 'name' and 'sku' columns to import successfully
+        </AlertDescription>
+      </Alert>
       
       <div className="border rounded-md p-3 space-y-3">
         <div>
