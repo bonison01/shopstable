@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -41,7 +40,6 @@ const Sales = () => {
           labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
         }
         
-        // Get actual data for this date
         const startOfDay = new Date(date);
         startOfDay.setHours(0, 0, 0, 0);
         
@@ -100,7 +98,6 @@ const Sales = () => {
     },
   });
 
-  // Fetch category data from the database
   const { data: categoryData, isLoading: categoryLoading } = useQuery({
     queryKey: ['sales-by-category'],
     queryFn: async () => {
@@ -117,7 +114,6 @@ const Sales = () => {
         throw error;
       }
       
-      // Calculate sales value by category (price * stock)
       const categorySales = {};
       
       products?.forEach(product => {
@@ -131,10 +127,8 @@ const Sales = () => {
         categorySales[category] += productValue;
       });
       
-      // Calculate total for percentages
       const totalValue = Object.values(categorySales).reduce((sum: any, val: any) => sum + val, 0);
       
-      // Format for pie chart
       const formattedData = Object.keys(categorySales).map(category => ({
         name: category,
         value: Math.round((categorySales[category] / totalValue) * 100)
@@ -144,7 +138,6 @@ const Sales = () => {
     }
   });
 
-  // Fetch top products data from the database
   const { data: topProductsData, isLoading: productsLoading } = useQuery({
     queryKey: ['top-products'],
     queryFn: async () => {
@@ -161,7 +154,6 @@ const Sales = () => {
         throw error;
       }
       
-      // Calculate sales by product
       const productSales = {};
       
       orderItems?.forEach(item => {
@@ -175,7 +167,6 @@ const Sales = () => {
         productSales[productName] += itemValue;
       });
       
-      // Sort and get top 5
       const sortedProducts = Object.keys(productSales)
         .map(name => ({ name, sales: productSales[name] }))
         .sort((a, b) => b.sales - a.sales)
@@ -191,10 +182,12 @@ const Sales = () => {
     const firstValue = salesData[0].sales;
     const lastValue = salesData[salesData.length - 1].sales;
     
-    return (((lastValue - firstValue) / firstValue) * 100).toFixed(1);
+    if (firstValue === 0) return 0;
+    
+    return ((lastValue - firstValue) / firstValue) * 100;
   };
 
-  const trend = parseFloat(calculateTrend() as string);
+  const trend = calculateTrend();
 
   return (
     <div className="flex min-h-screen bg-muted/40">
