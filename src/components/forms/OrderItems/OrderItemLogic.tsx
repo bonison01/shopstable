@@ -1,10 +1,43 @@
 
-import { type Product, type OrderItem, type CurrentItemState } from "@/hooks/use-order-form";
+import { type Product, type OrderItem, type CurrentItemState, type Customer } from "@/hooks/use-order-form";
+
+export const getProductPrice = (
+  product: Product,
+  customers?: Customer[],
+  customerId?: string
+): number => {
+  if (!customers || !customerId) {
+    return product.price; // Default price
+  }
+
+  const customer = customers.find(c => c.id === customerId);
+  if (!customer) {
+    return product.price; // Customer not found, use default price
+  }
+
+  switch (customer.customer_type) {
+    case 'wholesale':
+      return product.wholesale_price !== null && product.wholesale_price !== undefined 
+        ? product.wholesale_price 
+        : product.price;
+    case 'trainer':
+      return product.trainer_price !== null && product.trainer_price !== undefined 
+        ? product.trainer_price 
+        : product.price;
+    case 'retail':
+      return product.retail_price !== null && product.retail_price !== undefined 
+        ? product.retail_price 
+        : product.price;
+    default:
+      return product.price;
+  }
+};
 
 export const addOrderItem = (
   currentItem: CurrentItemState,
-  order: { items: OrderItem[] },
+  order: { customer_id: string, items: OrderItem[] },
   products?: Product[],
+  customers?: Customer[],
   onError?: (message: string) => void
 ) => {
   if (!currentItem.product_id || currentItem.quantity <= 0) {
@@ -19,6 +52,9 @@ export const addOrderItem = (
     if (onError) onError(`Only ${product.stock} units available`);
     return null;
   }
+
+  // Get the appropriate price based on customer type
+  const itemPrice = getProductPrice(product, customers, order.customer_id);
 
   const existingItemIndex = order.items.findIndex(
     item => item.product_id === currentItem.product_id
@@ -36,7 +72,7 @@ export const addOrderItem = (
     updatedItems[existingItemIndex] = {
       ...updatedItems[existingItemIndex],
       quantity: newQuantity,
-      subtotal: product.price * newQuantity,
+      subtotal: itemPrice * newQuantity,
     };
     
     return updatedItems;
@@ -44,9 +80,9 @@ export const addOrderItem = (
     const newItem: OrderItem = {
       product_id: product.id,
       product_name: product.name,
-      price: product.price,
+      price: itemPrice,
       quantity: currentItem.quantity,
-      subtotal: product.price * currentItem.quantity,
+      subtotal: itemPrice * currentItem.quantity,
     };
     
     return [...order.items, newItem];

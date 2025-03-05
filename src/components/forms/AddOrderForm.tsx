@@ -35,6 +35,7 @@ const AddOrderForm = ({ onSuccess }: { onSuccess?: () => void }) => {
       currentItem, 
       order, 
       products, 
+      customers,
       (message) => toast({
         variant: "destructive",
         title: "Invalid item",

@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,6 +22,7 @@ const AddCustomerForm = ({ onSuccess }: { onSuccess?: () => void }) => {
     phone: "",
     address: "",
     status: "active",
+    customer_type: "retail",
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -65,6 +67,7 @@ const AddCustomerForm = ({ onSuccess }: { onSuccess?: () => void }) => {
           phone: customer.phone || null,
           address: customer.address || null,
           status: customer.status,
+          customer_type: customer.customer_type,
         })
         .select();
 
@@ -82,6 +85,7 @@ const AddCustomerForm = ({ onSuccess }: { onSuccess?: () => void }) => {
         phone: "",
         address: "",
         status: "active",
+        customer_type: "retail",
       });
 
       if (onSuccess) onSuccess();
@@ -156,6 +160,23 @@ const AddCustomerForm = ({ onSuccess }: { onSuccess?: () => void }) => {
             <SelectContent>
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="inactive">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="customer_type">Customer Type</Label>
+          <Select 
+            value={customer.customer_type} 
+            onValueChange={(value) => handleSelectChange("customer_type", value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select customer type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="retail">Retail</SelectItem>
+              <SelectItem value="wholesale">Wholesale</SelectItem>
+              <SelectItem value="trainer">Trainer</SelectItem>
             </SelectContent>
           </Select>
         </div>

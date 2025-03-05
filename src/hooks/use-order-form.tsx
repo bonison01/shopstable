@@ -8,6 +8,7 @@ export interface Customer {
   id: string;
   name: string;
   email: string;
+  customer_type?: string;
 }
 
 export interface Product {
@@ -15,6 +16,9 @@ export interface Product {
   name: string;
   price: number;
   stock: number;
+  wholesale_price?: number | null;
+  retail_price?: number | null;
+  trainer_price?: number | null;
 }
 
 export interface OrderItem {
@@ -59,7 +63,7 @@ export const useOrderForm = (onSuccess?: () => void) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('customers')
-        .select('id, name, email')
+        .select('id, name, email, customer_type')
         .order('name');
       
       if (error) {
@@ -80,7 +84,7 @@ export const useOrderForm = (onSuccess?: () => void) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('products')
-        .select('id, name, price, stock')
+        .select('id, name, price, stock, wholesale_price, retail_price, trainer_price')
         .order('name');
       
       if (error) {

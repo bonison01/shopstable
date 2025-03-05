@@ -2,6 +2,7 @@
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { type Customer } from "@/hooks/use-order-form";
+import { Badge } from "@/components/ui/badge";
 
 interface OrderFormFieldsProps {
   customerId: string;
@@ -20,26 +21,36 @@ export const OrderFormFields = ({
   customersLoading,
   onFieldChange
 }: OrderFormFieldsProps) => {
+  // Get the selected customer
+  const selectedCustomer = customers?.find(c => c.id === customerId);
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div className="space-y-2">
         <Label htmlFor="customer">Customer *</Label>
-        <Select 
-          value={customerId} 
-          onValueChange={(value) => onFieldChange("customer_id", value)}
-          disabled={customersLoading}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select customer" />
-          </SelectTrigger>
-          <SelectContent>
-            {customers?.map(customer => (
-              <SelectItem key={customer.id} value={customer.id}>
-                {customer.name} ({customer.email})
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex flex-col space-y-1">
+          <Select 
+            value={customerId} 
+            onValueChange={(value) => onFieldChange("customer_id", value)}
+            disabled={customersLoading}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select customer" />
+            </SelectTrigger>
+            <SelectContent>
+              {customers?.map(customer => (
+                <SelectItem key={customer.id} value={customer.id}>
+                  {customer.name} ({customer.email})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {selectedCustomer?.customer_type && (
+            <Badge className="self-start mt-1" variant="outline">
+              {selectedCustomer.customer_type.charAt(0).toUpperCase() + selectedCustomer.customer_type.slice(1)} Customer
+            </Badge>
+          )}
+        </div>
       </div>
       
       <div className="space-y-2">
