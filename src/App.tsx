@@ -12,6 +12,7 @@ import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Staff from './pages/Staff';
 import Settings from './pages/Settings';
+import CompanyDetails from './pages/CompanyDetails';
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
         <Route path="/cash-flow" element={<CashFlow />} />
         <Route path="/staff" element={<Staff />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/company/:companyId" element={<CompanyDetails />} />
       </Route>
       <Route path="/auth" element={<Auth />} />
       <Route path="*" element={<NotFound />} />

@@ -3,8 +3,9 @@ import { StaffMember } from "@/hooks/staff/types";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Eye, Pencil, Trash2 } from "lucide-react";
+import { Eye, Pencil, Trash2, Building2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface StaffListProps {
   staffMembers: StaffMember[] | undefined;
@@ -74,6 +75,7 @@ export function StaffList({
             <th className="p-3 text-left">Email</th>
             <th className="p-3 text-left">Role</th>
             <th className="p-3 text-left">Status</th>
+            <th className="p-3 text-left">Company Access</th>
             <th className="p-3 text-left">Actions</th>
           </tr>
         </thead>
@@ -102,6 +104,32 @@ export function StaffList({
                 >
                   {staff.status}
                 </Badge>
+              </td>
+              <td className="p-3">
+                {staff.company_access && staff.company_access.length > 0 ? (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Badge variant="outline" className="flex items-center gap-1">
+                          <Building2 className="h-3 w-3" />
+                          {staff.company_access.length}
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <div className="space-y-1">
+                          <p className="font-medium">Company Access:</p>
+                          <ul className="text-xs space-y-1">
+                            {staff.company_access.map((company, idx) => (
+                              <li key={idx}>{company.business_name}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                ) : (
+                  <span className="text-muted-foreground text-sm">None</span>
+                )}
               </td>
               <td className="p-3">
                 <div className="flex items-center gap-2">

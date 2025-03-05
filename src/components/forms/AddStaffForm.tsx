@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,12 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAuth } from "@/contexts/auth/useAuth";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const AddStaffForm = ({ onSuccess }: { onSuccess?: () => void }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   
   const [staff, setStaff] = useState({
     staff_email: "",
@@ -21,6 +23,7 @@ const AddStaffForm = ({ onSuccess }: { onSuccess?: () => void }) => {
     last_name: "",
     role: "staff",
     status: "active",
+    grant_company_access: true,
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -30,6 +33,10 @@ const AddStaffForm = ({ onSuccess }: { onSuccess?: () => void }) => {
 
   const handleSelectChange = (name: string, value: string) => {
     setStaff(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleCheckboxChange = (checked: boolean | string) => {
+    setStaff(prev => ({ ...prev, grant_company_access: !!checked }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -79,9 +86,30 @@ const AddStaffForm = ({ onSuccess }: { onSuccess?: () => void }) => {
 
       if (error) throw error;
 
+      // If granting company access and we have a business name
+      if (staff.grant_company_access && profile?.business_name && data?.[0]?.id) {
+        // Add company access record
+        const { error: accessError } = await supabase
+          .from('company_access')
+          .insert({
+            staff_id: data[0].id,
+            owner_id: user.id,
+            business_name: profile.business_name
+          });
+
+        if (accessError) {
+          console.error("Error adding company access:", accessError);
+          toast({
+            variant: "destructive",
+            title: "Warning",
+            description: "Staff member was added but company access could not be granted",
+          });
+        }
+      }
+
       toast({
         title: "Staff Added",
-        description: `${staff.first_name} ${staff.last_name} has been added as staff.`,
+        description: `${staff.first_name} ${staff.last_name} has been added as ${staff.role}.`,
       });
 
       // Reset form
@@ -91,6 +119,7 @@ const AddStaffForm = ({ onSuccess }: { onSuccess?: () => void }) => {
         last_name: "",
         role: "staff",
         status: "active",
+        grant_company_access: true,
       });
 
       if (onSuccess) onSuccess();
@@ -185,6 +214,22 @@ const AddStaffForm = ({ onSuccess }: { onSuccess?: () => void }) => {
             </SelectContent>
           </Select>
         </div>
+
+        {profile?.business_name && (
+          <div className="md:col-span-2 flex items-center space-x-2 pt-2">
+            <Checkbox 
+              id="grant_company_access" 
+              checked={staff.grant_company_access}
+              onCheckedChange={handleCheckboxChange}
+            />
+            <Label 
+              htmlFor="grant_company_access" 
+              className="text-sm font-normal cursor-pointer"
+            >
+              Grant access to {profile.business_name}
+            </Label>
+          </div>
+        )}
       </div>
       
       <div className="flex justify-end gap-2">

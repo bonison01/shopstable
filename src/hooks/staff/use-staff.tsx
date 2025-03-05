@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,7 +22,8 @@ export const useStaff = () => {
   const { data: staffMembers, isLoading, refetch } = useQuery({
     queryKey: ["staff"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First get staff members
+      const { data: staffData, error } = await supabase
         .from("staff")
         .select("*")
         .order("created_at", { ascending: false });
@@ -35,7 +37,35 @@ export const useStaff = () => {
         throw error;
       }
 
-      return data as StaffMember[];
+      // Get company access for staff members
+      const staffIds = staffData.map(staff => staff.id);
+      
+      if (staffIds.length === 0) {
+        return staffData as StaffMember[];
+      }
+
+      const { data: companyAccessData, error: companyError } = await supabase
+        .from("company_access")
+        .select("*")
+        .in("staff_id", staffIds);
+
+      if (companyError) {
+        console.error("Error fetching company access:", companyError);
+      }
+
+      // Merge staff with company access
+      const enrichedStaffData = staffData.map(staff => {
+        const accessRecords = companyAccessData?.filter(
+          access => access.staff_id === staff.id
+        ) || [];
+        
+        return {
+          ...staff,
+          company_access: accessRecords.length > 0 ? accessRecords : undefined,
+        };
+      });
+      
+      return enrichedStaffData as StaffMember[];
     },
     enabled: !!user, // Only fetch when user is authenticated
   });
@@ -122,6 +152,19 @@ export const useStaff = () => {
   // Handle staff deletion
   const handleDeleteStaff = async () => {
     try {
+      // First, delete related company access records
+      for (const staffId of selectedStaffIds) {
+        const { error: accessError } = await supabase
+          .from("company_access")
+          .delete()
+          .eq("staff_id", staffId);
+          
+        if (accessError) {
+          console.error("Error deleting company access:", accessError);
+        }
+      }
+      
+      // Then delete staff records
       const { error } = await supabase
         .from("staff")
         .delete()

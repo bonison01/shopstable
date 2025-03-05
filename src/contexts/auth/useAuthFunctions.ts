@@ -9,6 +9,7 @@ export const useAuthFunctions = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isStaff, setIsStaff] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -28,6 +29,7 @@ export const useAuthFunctions = () => {
       if (data) {
         setProfile(data);
         setIsAdmin(data.role === 'admin');
+        setIsStaff(data.role === 'staff');
       }
     } catch (error: any) {
       console.error('Error fetching user profile:', error.message);
@@ -164,6 +166,8 @@ export const useAuthFunctions = () => {
     setProfile,
     isAdmin,
     setIsAdmin,
+    isStaff,
+    setIsStaff,
     fetchProfile,
     signIn,
     signUp,

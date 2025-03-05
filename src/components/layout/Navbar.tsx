@@ -1,5 +1,5 @@
 
-import { Menu, BellDot } from "lucide-react";
+import { Menu, BellDot, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu";
 import {
   Avatar,
@@ -26,7 +27,7 @@ interface NavbarProps {
 }
 
 export function Navbar({ toggleSidebar, isSidebarCollapsed }: NavbarProps) {
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut, staffCompanyAccess } = useAuth();
   const navigate = useNavigate();
   
   // Get user initials for avatar
@@ -78,6 +79,31 @@ export function Navbar({ toggleSidebar, isSidebarCollapsed }: NavbarProps) {
       </div>
 
       <div className="flex items-center gap-2">
+        {(profile?.role === 'admin' || profile?.role === 'staff') && staffCompanyAccess && staffCompanyAccess.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2">
+                <Building2 className="h-4 w-4" />
+                <span className="hidden sm:inline">Companies</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Available Companies</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                {staffCompanyAccess.map((company) => (
+                  <DropdownMenuItem 
+                    key={company.id}
+                    onClick={() => navigate(`/company/${company.id}`)}
+                  >
+                    {company.business_name}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+
         <Button variant="ghost" size="icon" aria-label="Notifications">
           <BellDot className="h-5 w-5" />
         </Button>
@@ -105,6 +131,11 @@ export function Navbar({ toggleSidebar, isSidebarCollapsed }: NavbarProps) {
                 {profile?.business_name && (
                   <p className="text-xs font-medium text-muted-foreground">
                     {profile.business_name}
+                  </p>
+                )}
+                {profile?.role && (
+                  <p className="text-xs font-medium text-primary">
+                    Role: {profile.role.charAt(0).toUpperCase() + profile.role.slice(1)}
                   </p>
                 )}
               </div>
