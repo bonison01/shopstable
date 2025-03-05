@@ -1,15 +1,12 @@
 
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
 import { OrderDetailsTab } from "./details/OrderDetailsTab";
 import { OrderItemsTab } from "./details/OrderItemsTab";
 import { OrderDetailsSkeleton } from "./details/OrderDetailsSkeleton";
 import { OrderNotFound } from "./details/OrderNotFound";
+import { useOrderDetails } from "@/hooks/use-order-details";
 
 interface OrderDetailsDialogProps {
   orderId: string | null;
@@ -22,36 +19,7 @@ export function OrderDetailsDialog({
   isOpen, 
   onClose
 }: OrderDetailsDialogProps) {
-  const { toast } = useToast();
-
-  const { data: order, isLoading: isLoadingOrder } = useQuery({
-    queryKey: ["order", orderId],
-    queryFn: async () => {
-      if (!orderId) return null;
-      
-      const { data, error } = await supabase
-        .from("orders")
-        .select(`
-          *,
-          customers:customer_id (*),
-          order_items (*)
-        `)
-        .eq("id", orderId)
-        .single();
-      
-      if (error) {
-        toast({
-          variant: "destructive",
-          title: "Error fetching order",
-          description: error.message,
-        });
-        throw error;
-      }
-      
-      return data;
-    },
-    enabled: !!orderId && isOpen,
-  });
+  const { order, isLoading } = useOrderDetails(orderId, isOpen);
 
   if (!orderId) return null;
 
@@ -62,11 +30,11 @@ export function OrderDetailsDialog({
       <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl">
-            {isLoadingOrder ? "Loading Order..." : `Order #${orderId.substring(0, 8)}`}
+            {isLoading ? "Loading Order..." : `Order #${orderId.substring(0, 8)}`}
           </DialogTitle>
         </DialogHeader>
 
-        {isLoadingOrder ? (
+        {isLoading ? (
           <OrderDetailsSkeleton />
         ) : order ? (
           <Tabs defaultValue="details">
