@@ -85,6 +85,15 @@ export function formatPhoneNumber(phone: string): string {
   return phone;
 }
 
+// Calculate price after discount
+export function calculateDiscountedPrice(basePrice: number, discountPercentage: number): number {
+  if (!basePrice || isNaN(basePrice)) return 0;
+  if (!discountPercentage || isNaN(discountPercentage)) return basePrice;
+  
+  const discount = (basePrice * discountPercentage) / 100;
+  return basePrice - discount;
+}
+
 // Custom RPC parameters interface
 export interface RPCParams {
   row_id: string;

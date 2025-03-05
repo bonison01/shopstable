@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -17,14 +16,17 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { DialogFooter } from "@/components/ui/dialog";
+import { calculateDiscountedPrice } from "@/utils/format";
 
 const productSchema = z.object({
   name: z.string().min(1, "Product name is required"),
   sku: z.string().min(1, "SKU is required"),
-  category: z.string().min(1, "Category is required"),
   category_type: z.string().optional(),
   description: z.string().optional(),
   price: z.coerce.number().min(0, "Price must be a positive number"),
+  wholesale_discount: z.coerce.number().min(0).max(100).default(10),
+  retail_discount: z.coerce.number().min(0).max(100).default(0),
+  trainer_discount: z.coerce.number().min(0).max(100).default(20),
   wholesale_price: z.coerce.number().optional(),
   retail_price: z.coerce.number().optional(),
   trainer_price: z.coerce.number().optional(),
@@ -37,7 +39,22 @@ const productSchema = z.object({
 type ProductFormValues = z.infer<typeof productSchema>;
 
 interface EditProductFormProps {
-  product: ProductFormValues & { id: string };
+  product: {
+    id: string;
+    name: string;
+    sku: string;
+    category: string;
+    category_type?: string | null;
+    description?: string | null;
+    price: number;
+    wholesale_price?: number | null;
+    retail_price?: number | null;
+    trainer_price?: number | null;
+    purchased_price?: number | null;
+    stock: number;
+    threshold: number;
+    image_url?: string | null;
+  };
   onSuccess: () => void;
   onCancel: () => void;
 }
@@ -46,15 +63,38 @@ export default function EditProductForm({ product, onSuccess, onCancel }: EditPr
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
+  const getInitialDiscounts = () => {
+    const basePrice = product.price || 0;
+    const wholesaleDiscount = product.wholesale_price 
+      ? Math.round(((basePrice - (product.wholesale_price || 0)) / basePrice) * 100) 
+      : 10;
+    const retailDiscount = product.retail_price 
+      ? Math.round(((basePrice - (product.retail_price || 0)) / basePrice) * 100) 
+      : 0;
+    const trainerDiscount = product.trainer_price 
+      ? Math.round(((basePrice - (product.trainer_price || 0)) / basePrice) * 100) 
+      : 20;
+    
+    return {
+      wholesale_discount: wholesaleDiscount >= 0 ? wholesaleDiscount : 10,
+      retail_discount: retailDiscount >= 0 ? retailDiscount : 0,
+      trainer_discount: trainerDiscount >= 0 ? trainerDiscount : 20,
+    };
+  };
+
+  const initialDiscounts = getInitialDiscounts();
+
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
     defaultValues: {
       name: product.name,
       sku: product.sku,
-      category: product.category,
       category_type: product.category_type || "",
       description: product.description || "",
       price: product.price,
+      wholesale_discount: initialDiscounts.wholesale_discount,
+      retail_discount: initialDiscounts.retail_discount,
+      trainer_discount: initialDiscounts.trainer_discount,
       wholesale_price: product.wholesale_price || undefined,
       retail_price: product.retail_price || undefined,
       trainer_price: product.trainer_price || undefined,
@@ -65,6 +105,19 @@ export default function EditProductForm({ product, onSuccess, onCancel }: EditPr
     },
   });
 
+  useEffect(() => {
+    const basePrice = form.watch('price');
+    const wholesaleDiscount = form.watch('wholesale_discount');
+    const retailDiscount = form.watch('retail_discount');
+    const trainerDiscount = form.watch('trainer_discount');
+    
+    if (basePrice > 0) {
+      form.setValue('wholesale_price', calculateDiscountedPrice(basePrice, wholesaleDiscount));
+      form.setValue('retail_price', calculateDiscountedPrice(basePrice, retailDiscount));
+      form.setValue('trainer_price', calculateDiscountedPrice(basePrice, trainerDiscount));
+    }
+  }, [form.watch('price'), form.watch('wholesale_discount'), form.watch('retail_discount'), form.watch('trainer_discount')]);
+
   async function onSubmit(values: ProductFormValues) {
     setIsLoading(true);
     try {
@@ -72,6 +125,7 @@ export default function EditProductForm({ product, onSuccess, onCancel }: EditPr
         .from("products")
         .update({
           ...values,
+          category: product.category,
           last_updated: new Date().toISOString(),
         })
         .eq("id", product.id);
@@ -128,12 +182,12 @@ export default function EditProductForm({ product, onSuccess, onCancel }: EditPr
 
           <FormField
             control={form.control}
-            name="category"
+            name="category_type"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Category</FormLabel>
+                <FormLabel>Category Type</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter category" {...field} />
+                  <Input placeholder="Enter category type (optional)" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -142,12 +196,12 @@ export default function EditProductForm({ product, onSuccess, onCancel }: EditPr
 
           <FormField
             control={form.control}
-            name="category_type"
+            name="price"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Category Type</FormLabel>
+                <FormLabel>Base Price (₹)</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter category type (optional)" {...field} />
+                  <Input type="number" min="0" step="0.01" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -173,15 +227,21 @@ export default function EditProductForm({ product, onSuccess, onCancel }: EditPr
           )}
         />
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField
             control={form.control}
-            name="price"
+            name="wholesale_discount"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Price (INR)</FormLabel>
+                <FormLabel>Wholesale Discount (%)</FormLabel>
                 <FormControl>
-                  <Input type="number" min="0" step="0.01" {...field} />
+                  <Input 
+                    type="number" 
+                    min="0" 
+                    max="100" 
+                    step="1" 
+                    {...field} 
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -193,15 +253,35 @@ export default function EditProductForm({ product, onSuccess, onCancel }: EditPr
             name="wholesale_price"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Wholesale Price (INR)</FormLabel>
+                <FormLabel>Wholesale Price (₹)</FormLabel>
                 <FormControl>
                   <Input 
                     type="number" 
                     min="0" 
                     step="0.01" 
-                    placeholder="Optional" 
+                    readOnly
+                    className="bg-gray-100" 
                     {...field} 
-                    value={field.value === undefined ? "" : field.value}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="retail_discount"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Retail Discount (%)</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="number" 
+                    min="0" 
+                    max="100" 
+                    step="1" 
+                    {...field} 
                   />
                 </FormControl>
                 <FormMessage />
@@ -214,15 +294,15 @@ export default function EditProductForm({ product, onSuccess, onCancel }: EditPr
             name="retail_price"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Retail Price (INR)</FormLabel>
+                <FormLabel>Retail Price (₹)</FormLabel>
                 <FormControl>
                   <Input 
                     type="number" 
                     min="0" 
                     step="0.01" 
-                    placeholder="Optional" 
+                    readOnly
+                    className="bg-gray-100" 
                     {...field} 
-                    value={field.value === undefined ? "" : field.value}
                   />
                 </FormControl>
                 <FormMessage />
@@ -231,21 +311,41 @@ export default function EditProductForm({ product, onSuccess, onCancel }: EditPr
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="trainer_discount"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Trainer Discount (%)</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="number" 
+                    min="0" 
+                    max="100" 
+                    step="1" 
+                    {...field} 
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
           <FormField
             control={form.control}
             name="trainer_price"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Trainer Price (INR)</FormLabel>
+                <FormLabel>Trainer Price (₹)</FormLabel>
                 <FormControl>
                   <Input 
                     type="number" 
                     min="0" 
                     step="0.01" 
-                    placeholder="Optional" 
+                    readOnly
+                    className="bg-gray-100" 
                     {...field} 
-                    value={field.value === undefined ? "" : field.value}
                   />
                 </FormControl>
                 <FormMessage />
@@ -258,7 +358,7 @@ export default function EditProductForm({ product, onSuccess, onCancel }: EditPr
             name="purchased_price"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Purchased Price (INR)</FormLabel>
+                <FormLabel>Purchased Price (₹)</FormLabel>
                 <FormControl>
                   <Input 
                     type="number" 

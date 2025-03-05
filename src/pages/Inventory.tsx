@@ -20,7 +20,8 @@ import {
   Edit, 
   Trash, 
   Download,
-  Upload
+  Upload,
+  Info
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -62,9 +63,8 @@ interface ExcelRow {
   Name?: string;
   sku?: string;
   SKU?: string;
-  category?: string;
-  Category?: string;
   category_type?: string;
+  Category_type?: string;
   price?: number | string;
   Price?: number | string;
   wholesale_price?: number | string;
@@ -241,8 +241,8 @@ const Inventory = () => {
             const product = {
               name: item.name || item.Name || '',
               sku: item.sku || item.SKU || '',
-              category: item.category || item.Category || '',
-              category_type: item.category_type || null,
+              category: 'Default', // Using default category
+              category_type: item.category_type || item.Category_type || null,
               price: parseFloat(String(item.price || item.Price || 0)),
               wholesale_price: item.wholesale_price ? parseFloat(String(item.wholesale_price)) : null,
               retail_price: item.retail_price ? parseFloat(String(item.retail_price)) : null,
@@ -254,7 +254,7 @@ const Inventory = () => {
               image_url: item.image_url || null
             };
             
-            if (!product.name || !product.sku || !product.category) {
+            if (!product.name || !product.sku) {
               throw new Error(`Missing required fields for product: ${product.name || 'Unknown'}`);
             }
             
@@ -375,7 +375,7 @@ const Inventory = () => {
                   <DialogHeader>
                     <DialogTitle>Import Inventory from Excel</DialogTitle>
                     <DialogDescription>
-                      Upload an Excel file to import or update products. The file should contain columns for product details.
+                      Upload an Excel file to import or update products. The file should contain the columns described below.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
@@ -388,13 +388,48 @@ const Inventory = () => {
                         onChange={handleFileChange}
                       />
                     </div>
-                    <div className="text-sm text-muted-foreground">
-                      <p className="font-medium mb-1">Required columns:</p>
-                      <ul className="list-disc pl-5 space-y-1">
-                        <li>name (Product Name)</li>
-                        <li>sku (SKU)</li>
-                        <li>category (Category)</li>
-                      </ul>
+                    
+                    <div className="text-sm space-y-2">
+                      <div className="flex items-center text-primary">
+                        <Info className="h-4 w-4 mr-1" />
+                        <span className="font-semibold">Column Mapping Guide</span>
+                      </div>
+                      
+                      <div className="border rounded-md p-3 space-y-3">
+                        <div>
+                          <p className="font-medium mb-1">Required Columns:</p>
+                          <ul className="list-disc pl-5 space-y-1">
+                            <li><span className="font-semibold">name</span> or <span className="font-semibold">Name</span>: Product name</li>
+                            <li><span className="font-semibold">sku</span> or <span className="font-semibold">SKU</span>: Unique product code</li>
+                          </ul>
+                        </div>
+                        
+                        <div>
+                          <p className="font-medium mb-1">Optional Columns:</p>
+                          <ul className="list-disc pl-5 space-y-1">
+                            <li><span className="font-semibold">category_type</span> or <span className="font-semibold">Category_type</span>: Type of product category</li>
+                            <li><span className="font-semibold">price</span> or <span className="font-semibold">Price</span>: Base price in INR</li>
+                            <li><span className="font-semibold">wholesale_price</span>: Wholesale price in INR</li>
+                            <li><span className="font-semibold">retail_price</span>: Retail price in INR</li>
+                            <li><span className="font-semibold">trainer_price</span>: Trainer price in INR</li>
+                            <li><span className="font-semibold">purchased_price</span>: Purchase cost in INR</li>
+                            <li><span className="font-semibold">stock</span> or <span className="font-semibold">Stock</span>: Current inventory quantity</li>
+                            <li><span className="font-semibold">threshold</span> or <span className="font-semibold">Threshold</span>: Low stock alert level</li>
+                            <li><span className="font-semibold">description</span> or <span className="font-semibold">Description</span>: Product details</li>
+                            <li><span className="font-semibold">image_url</span>: URL to product image</li>
+                          </ul>
+                        </div>
+                        
+                        <div>
+                          <p className="font-medium mb-1">Data Processing:</p>
+                          <ul className="list-disc pl-5 space-y-1">
+                            <li>Products are matched by SKU - existing products will be updated</li>
+                            <li>New products (with unique SKUs) will be created</li>
+                            <li>Price fields must contain numeric values</li>
+                            <li>Stock and threshold must be whole numbers</li>
+                          </ul>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   <DialogFooter>
@@ -486,10 +521,6 @@ const Inventory = () => {
                     </CardHeader>
                     <CardContent className="p-4">
                       <div className="flex flex-col gap-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Category:</span>
-                          <span className="font-medium">{product.category}</span>
-                        </div>
                         {product.category_type && (
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Type:</span>
@@ -574,44 +605,6 @@ const Inventory = () => {
                   onCancel={() => setEditDialogOpen(false)} 
                 />
               )}
-            </DialogContent>
-          </Dialog>
-          
-          <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Import Inventory from Excel</DialogTitle>
-                <DialogDescription>
-                  Upload an Excel file to import or update products. The file should contain columns for product details.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="excel-file">Excel File</Label>
-                  <Input 
-                    id="excel-file" 
-                    type="file" 
-                    accept=".xlsx,.xls"
-                    onChange={handleFileChange}
-                  />
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  <p className="font-medium mb-1">Required columns:</p>
-                  <ul className="list-disc pl-5 space-y-1">
-                    <li>name (Product Name)</li>
-                    <li>sku (SKU)</li>
-                    <li>category (Category)</li>
-                  </ul>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setImportDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleImportFromExcel} disabled={!importFile || isImporting}>
-                  {isImporting ? "Importing..." : "Import"}
-                </Button>
-              </DialogFooter>
             </DialogContent>
           </Dialog>
         </main>

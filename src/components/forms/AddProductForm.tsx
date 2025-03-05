@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -10,18 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-
-const productCategories = [
-  "Electronics", 
-  "Accessories", 
-  "Furniture", 
-  "Clothing", 
-  "Office Supplies",
-  "Hardware",
-  "Software",
-  "Services",
-  "Other"
-];
+import { calculateDiscountedPrice } from "@/utils/format";
 
 const categoryTypes = [
   "Protein",
@@ -40,9 +29,11 @@ const AddProductForm = ({ onSuccess }: { onSuccess?: () => void }) => {
   
   const [product, setProduct] = useState({
     name: "",
-    category: "",
     category_type: "",
     price: "",
+    wholesale_discount: "10",
+    retail_discount: "0",
+    trainer_discount: "20",
     wholesale_price: "",
     retail_price: "",
     trainer_price: "",
@@ -53,6 +44,23 @@ const AddProductForm = ({ onSuccess }: { onSuccess?: () => void }) => {
     description: "",
     image_url: ""
   });
+
+  // Calculate discounted prices when base price or discount percentages change
+  useEffect(() => {
+    const basePrice = parseFloat(product.price);
+    if (!isNaN(basePrice)) {
+      const wholesaleDiscount = parseFloat(product.wholesale_discount);
+      const retailDiscount = parseFloat(product.retail_discount);
+      const trainerDiscount = parseFloat(product.trainer_discount);
+      
+      setProduct(prev => ({
+        ...prev,
+        wholesale_price: calculateDiscountedPrice(basePrice, wholesaleDiscount).toFixed(2),
+        retail_price: calculateDiscountedPrice(basePrice, retailDiscount).toFixed(2),
+        trainer_price: calculateDiscountedPrice(basePrice, trainerDiscount).toFixed(2)
+      }));
+    }
+  }, [product.price, product.wholesale_discount, product.retail_discount, product.trainer_discount]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -70,7 +78,7 @@ const AddProductForm = ({ onSuccess }: { onSuccess?: () => void }) => {
 
     try {
       // Simple validation
-      if (!product.name || !product.category || !product.price || !product.sku) {
+      if (!product.name || !product.price || !product.sku) {
         throw new Error("Please fill in all required fields");
       }
 
@@ -95,7 +103,7 @@ const AddProductForm = ({ onSuccess }: { onSuccess?: () => void }) => {
         .from('products')
         .insert({
           name: product.name,
-          category: product.category,
+          category: 'Default',  // Using a default value since category is removed
           category_type: product.category_type || null,
           price: numericPrice,
           wholesale_price: wholesalePrice,
@@ -120,9 +128,11 @@ const AddProductForm = ({ onSuccess }: { onSuccess?: () => void }) => {
       // Reset form
       setProduct({
         name: "",
-        category: "",
         category_type: "",
         price: "",
+        wholesale_discount: "10",
+        retail_discount: "0",
+        trainer_discount: "20",
         wholesale_price: "",
         retail_price: "",
         trainer_price: "",
@@ -171,26 +181,6 @@ const AddProductForm = ({ onSuccess }: { onSuccess?: () => void }) => {
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="category">Category *</Label>
-          <Select 
-            value={product.category} 
-            onValueChange={(value) => handleSelectChange("category", value)}
-            required
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select category" />
-            </SelectTrigger>
-            <SelectContent>
-              {productCategories.map(category => (
-                <SelectItem key={category} value={category}>
-                  {category}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <div className="space-y-2">
           <Label htmlFor="category_type">Category Type</Label>
           <Select 
             value={product.category_type} 
@@ -210,7 +200,7 @@ const AddProductForm = ({ onSuccess }: { onSuccess?: () => void }) => {
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="price">Price ($) *</Label>
+          <Label htmlFor="price">Base Price (₹) *</Label>
           <Input 
             id="price" 
             name="price" 
@@ -225,49 +215,7 @@ const AddProductForm = ({ onSuccess }: { onSuccess?: () => void }) => {
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="wholesale_price">Wholesale Price ($)</Label>
-          <Input 
-            id="wholesale_price" 
-            name="wholesale_price" 
-            type="number" 
-            min="0.01" 
-            step="0.01" 
-            value={product.wholesale_price} 
-            onChange={handleChange} 
-            placeholder="0.00"
-          />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="retail_price">Retail Price ($)</Label>
-          <Input 
-            id="retail_price" 
-            name="retail_price" 
-            type="number" 
-            min="0.01" 
-            step="0.01" 
-            value={product.retail_price} 
-            onChange={handleChange} 
-            placeholder="0.00"
-          />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="trainer_price">Trainer Price ($)</Label>
-          <Input 
-            id="trainer_price" 
-            name="trainer_price" 
-            type="number" 
-            min="0.01" 
-            step="0.01" 
-            value={product.trainer_price} 
-            onChange={handleChange} 
-            placeholder="0.00"
-          />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="purchased_price">Purchased Price ($)</Label>
+          <Label htmlFor="purchased_price">Purchased Price (₹)</Label>
           <Input 
             id="purchased_price" 
             name="purchased_price" 
@@ -277,6 +225,96 @@ const AddProductForm = ({ onSuccess }: { onSuccess?: () => void }) => {
             value={product.purchased_price} 
             onChange={handleChange} 
             placeholder="0.00"
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="wholesale_discount">Wholesale Discount (%)</Label>
+          <Input 
+            id="wholesale_discount" 
+            name="wholesale_discount" 
+            type="number" 
+            min="0" 
+            max="100" 
+            step="1" 
+            value={product.wholesale_discount} 
+            onChange={handleChange} 
+            placeholder="10"
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="wholesale_price">Wholesale Price (₹)</Label>
+          <Input 
+            id="wholesale_price" 
+            name="wholesale_price" 
+            type="number" 
+            min="0.01" 
+            step="0.01" 
+            value={product.wholesale_price} 
+            readOnly
+            className="bg-gray-100"
+            placeholder="Calculated from discount"
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="retail_discount">Retail Discount (%)</Label>
+          <Input 
+            id="retail_discount" 
+            name="retail_discount" 
+            type="number" 
+            min="0" 
+            max="100" 
+            step="1" 
+            value={product.retail_discount} 
+            onChange={handleChange} 
+            placeholder="0"
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="retail_price">Retail Price (₹)</Label>
+          <Input 
+            id="retail_price" 
+            name="retail_price" 
+            type="number" 
+            min="0.01" 
+            step="0.01" 
+            value={product.retail_price} 
+            readOnly
+            className="bg-gray-100"
+            placeholder="Calculated from discount"
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="trainer_discount">Trainer Discount (%)</Label>
+          <Input 
+            id="trainer_discount" 
+            name="trainer_discount" 
+            type="number" 
+            min="0" 
+            max="100" 
+            step="1" 
+            value={product.trainer_discount} 
+            onChange={handleChange} 
+            placeholder="20"
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="trainer_price">Trainer Price (₹)</Label>
+          <Input 
+            id="trainer_price" 
+            name="trainer_price" 
+            type="number" 
+            min="0.01" 
+            step="0.01" 
+            value={product.trainer_price} 
+            readOnly
+            className="bg-gray-100"
+            placeholder="Calculated from discount"
           />
         </div>
         
