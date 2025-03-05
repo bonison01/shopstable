@@ -1,11 +1,10 @@
-
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { X, Home, CreditCard, Users, Package, LineChart, BarChart3, DollarSign, Settings, Users2 } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth/useAuth";
 
 interface SidebarProps {
   isOpen: boolean;

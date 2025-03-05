@@ -1,65 +1,16 @@
 
-import React, { createContext, useState, useEffect, useContext } from 'react';
-import { Session, User } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { UserProfile } from './types';
 
-type AuthContextType = {
-  session: Session | null;
-  user: User | null;
-  profile: any | null;
-  isLoading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, firstName: string, lastName: string, businessName: string) => Promise<void>;
-  signOut: () => Promise<void>;
-  isAdmin: boolean;
-  updateBusinessName: (businessName: string) => Promise<void>;
-};
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<any | null>(null);
+export const useAuthFunctions = () => {
   const [isLoading, setIsLoading] = useState(true);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-
-  useEffect(() => {
-    // Initial session fetch
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      } else {
-        setIsLoading(false);
-      }
-    });
-
-    // Set up auth listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          fetchProfile(session.user.id);
-        } else {
-          setProfile(null);
-          setIsAdmin(false);
-          setIsLoading(false);
-        }
-      }
-    );
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
 
   const fetchProfile = async (userId: string) => {
     setIsLoading(true);
@@ -150,15 +101,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const updateBusinessName = async (businessName: string) => {
-    if (!user) return;
+  const updateBusinessName = async (userId: string, businessName: string) => {
+    if (!userId) return;
     
     setIsLoading(true);
     try {
       const { error } = await supabase
         .from('profiles')
         .update({ business_name: businessName })
-        .eq('id', user.id);
+        .eq('id', userId);
 
       if (error) throw error;
 
@@ -190,11 +141,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Even if there's an error (like session not found), we should still
       // clear the local state and redirect the user to the auth page
-      setSession(null);
-      setUser(null);
-      setProfile(null);
-      setIsAdmin(false);
-      
       navigate('/auth');
       toast({
         title: "Signed out",
@@ -211,25 +157,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const value = {
-    session,
-    user,
-    profile,
+  return {
     isLoading,
+    setIsLoading,
+    profile,
+    setProfile,
+    isAdmin,
+    setIsAdmin,
+    fetchProfile,
     signIn,
     signUp,
-    signOut,
-    isAdmin,
     updateBusinessName,
+    signOut
   };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
 };

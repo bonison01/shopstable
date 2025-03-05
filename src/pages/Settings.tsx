@@ -4,7 +4,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { Navbar } from "@/components/layout/Navbar";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { BusinessSettings } from "@/components/settings/BusinessSettings";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth/useAuth";
 import { Loader2 } from "lucide-react";
 
 const Settings = () => {

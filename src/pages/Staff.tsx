@@ -9,7 +9,7 @@ import { StaffHeader } from "@/components/staff/StaffHeader";
 import { StaffToolbar } from "@/components/staff/StaffToolbar";
 import { StaffList } from "@/components/staff/StaffList";
 import { DeleteStaffDialog } from "@/components/staff/DeleteStaffDialog";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth/useAuth";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
