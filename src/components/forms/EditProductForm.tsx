@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -17,6 +18,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { DialogFooter } from "@/components/ui/dialog";
 import { calculateDiscountedPrice } from "@/utils/format";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { categoryTypes } from "./ProductForm/ProductBasicInfo";
 
 const productSchema = z.object({
   name: z.string().min(1, "Product name is required"),
@@ -58,6 +61,68 @@ interface EditProductFormProps {
   onSuccess: () => void;
   onCancel: () => void;
 }
+
+// Utility component for form fields with discounts
+const DiscountPriceFormFields = ({ 
+  control, 
+  basePriceName, 
+  discountName, 
+  priceName, 
+  discountLabel, 
+  priceLabel 
+}: { 
+  control: any, 
+  basePriceName: string, 
+  discountName: string, 
+  priceName: string, 
+  discountLabel: string, 
+  priceLabel: string 
+}) => {
+  return (
+    <>
+      <FormField
+        control={control}
+        name={discountName}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>{discountLabel}</FormLabel>
+            <FormControl>
+              <Input 
+                type="number" 
+                min="0" 
+                max="100" 
+                step="1" 
+                {...field} 
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={control}
+        name={priceName}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>{priceLabel}</FormLabel>
+            <FormControl>
+              <Input 
+                type="number" 
+                min="0" 
+                step="0.01" 
+                readOnly
+                className="bg-gray-100" 
+                {...field} 
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+    </>
+  );
+};
 
 export default function EditProductForm({ product, onSuccess, onCancel }: EditProductFormProps) {
   const [isLoading, setIsLoading] = useState(false);
@@ -186,9 +251,21 @@ export default function EditProductForm({ product, onSuccess, onCancel }: EditPr
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Category Type</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter category type (optional)" {...field} />
-                </FormControl>
+                <Select 
+                  value={field.value || ""} 
+                  onValueChange={field.onChange}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categoryTypes.map(type => (
+                      <SelectItem key={type} value={type}>
+                        {type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}
@@ -228,129 +305,33 @@ export default function EditProductForm({ product, onSuccess, onCancel }: EditPr
         />
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <FormField
+          <DiscountPriceFormFields 
             control={form.control}
-            name="wholesale_discount"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Wholesale Discount (%)</FormLabel>
-                <FormControl>
-                  <Input 
-                    type="number" 
-                    min="0" 
-                    max="100" 
-                    step="1" 
-                    {...field} 
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+            basePriceName="price"
+            discountName="wholesale_discount"
+            priceName="wholesale_price"
+            discountLabel="Wholesale Discount (%)"
+            priceLabel="Wholesale Price (₹)"
           />
 
-          <FormField
+          <DiscountPriceFormFields 
             control={form.control}
-            name="wholesale_price"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Wholesale Price (₹)</FormLabel>
-                <FormControl>
-                  <Input 
-                    type="number" 
-                    min="0" 
-                    step="0.01" 
-                    readOnly
-                    className="bg-gray-100" 
-                    {...field} 
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="retail_discount"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Retail Discount (%)</FormLabel>
-                <FormControl>
-                  <Input 
-                    type="number" 
-                    min="0" 
-                    max="100" 
-                    step="1" 
-                    {...field} 
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="retail_price"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Retail Price (₹)</FormLabel>
-                <FormControl>
-                  <Input 
-                    type="number" 
-                    min="0" 
-                    step="0.01" 
-                    readOnly
-                    className="bg-gray-100" 
-                    {...field} 
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+            basePriceName="price"
+            discountName="retail_discount"
+            priceName="retail_price"
+            discountLabel="Retail Discount (%)"
+            priceLabel="Retail Price (₹)"
           />
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <FormField
+          <DiscountPriceFormFields 
             control={form.control}
-            name="trainer_discount"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Trainer Discount (%)</FormLabel>
-                <FormControl>
-                  <Input 
-                    type="number" 
-                    min="0" 
-                    max="100" 
-                    step="1" 
-                    {...field} 
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="trainer_price"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Trainer Price (₹)</FormLabel>
-                <FormControl>
-                  <Input 
-                    type="number" 
-                    min="0" 
-                    step="0.01" 
-                    readOnly
-                    className="bg-gray-100" 
-                    {...field} 
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+            basePriceName="price"
+            discountName="trainer_discount"
+            priceName="trainer_price"
+            discountLabel="Trainer Discount (%)"
+            priceLabel="Trainer Price (₹)"
           />
 
           <FormField
