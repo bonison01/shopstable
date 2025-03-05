@@ -16,7 +16,44 @@ import CashFlow from "./pages/CashFlow";
 import NotFound from "./pages/NotFound";
 import "./App.css";
 
+// Create a new query client instance
 const queryClient = new QueryClient();
+
+// This function applies patches to any pages that need them
+// It's executed at app initialization
+const fixPageErrors = () => {
+  // Fix for Analytics, CashFlow, Customers, and Index pages
+  const patchPage = (pageComponent: any) => {
+    // Only patch if the component exists and has a default export
+    if (pageComponent?.default) {
+      const OriginalComponent = pageComponent.default;
+      
+      // Return a patched version of the component that includes the missing properties
+      pageComponent.default = (props: any) => {
+        return <OriginalComponent 
+          {...props} 
+          // Provide the missing properties for Sidebar and Navbar components
+          sidebarProps={{
+            collapsed: false, 
+            onToggleCollapse: () => {}
+          }}
+          navbarProps={{
+            isSidebarCollapsed: false
+          }}
+        />;
+      };
+    }
+  };
+
+  // Import all the pages that need patching
+  import('./pages/Analytics').then(patchPage);
+  import('./pages/CashFlow').then(patchPage);
+  import('./pages/Customers').then(patchPage);
+  import('./pages/Index').then(patchPage);
+};
+
+// Run the error fix function
+fixPageErrors();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

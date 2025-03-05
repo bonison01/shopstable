@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +9,8 @@ import { formatCurrency } from "@/utils/format";
 import { BarChart3, ArrowRight } from "lucide-react";
 import { StatsCard } from "@/components/ui/StatsCard";
 import { Button } from "@/components/ui/button";
+import { useSidebar } from "@/hooks/use-sidebar";
+import { cn } from "@/utils/cn";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
 
@@ -19,7 +20,6 @@ const Analytics = () => {
   const { data: analyticsData, isLoading } = useQuery({
     queryKey: ['analytics-data'],
     queryFn: async () => {
-      // Get real data from the database
       const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
         .select('*');
@@ -47,16 +47,13 @@ const Analytics = () => {
         throw productsError;
       }
 
-      // Calculate total revenue
       const totalRevenue = ordersData?.reduce((sum, order) => sum + (order.total || 0), 0) || 0;
       
-      // Count orders by status
       const ordersByStatus = ordersData?.reduce((acc, order) => {
         acc[order.status] = (acc[order.status] || 0) + 1;
         return acc;
       }, {} as Record<string, number>) || {};
 
-      // Generate monthly data
       const monthlyData = generateMonthlyData(ordersData || []);
 
       return {
@@ -75,14 +72,12 @@ const Analytics = () => {
     const currentDate = new Date();
     const currentYear = currentDate.getFullYear();
     
-    // Initialize monthly data with zeros
     const monthlyData = monthNames.map(month => ({
       month,
       revenue: 0,
       orders: 0
     }));
     
-    // Fill with actual data
     orders.forEach(order => {
       const orderDate = new Date(order.created_at);
       if (orderDate.getFullYear() === currentYear) {
@@ -95,16 +90,25 @@ const Analytics = () => {
     return monthlyData;
   };
 
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
+  const { isOpen, toggle, close, collapsed, toggleCollapse } = useSidebar();
 
   return (
     <div className="flex min-h-screen bg-muted/40">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar 
+        isOpen={isOpen} 
+        onClose={close} 
+        collapsed={collapsed}
+        onToggleCollapse={toggleCollapse}
+      />
       
-      <div className="flex flex-1 flex-col">
-        <Navbar toggleSidebar={toggleSidebar} />
+      <div className={cn(
+        "flex flex-1 flex-col transition-all duration-300 ease-in-out",
+        collapsed ? "md:ml-16" : "md:ml-64"
+      )}>
+        <Navbar 
+          toggleSidebar={toggle} 
+          isSidebarCollapsed={collapsed}
+        />
         
         <main className="flex-1 p-4 md:p-6 lg:p-8">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">

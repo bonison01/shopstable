@@ -35,6 +35,8 @@ import {
 import { formatCurrency, formatDate } from "@/utils/format";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { useSidebar } from "@/hooks/use-sidebar";
+import { cn } from "@/utils/cn";
 
 interface RecentActivity {
   id: string;
@@ -124,6 +126,8 @@ const Index = () => {
       };
     }
   });
+
+  const { isOpen, toggle, close, collapsed, toggleCollapse } = useSidebar();
 
   useEffect(() => {
     const fetchRecentActivity = async () => {
@@ -287,10 +291,21 @@ const Index = () => {
 
   return (
     <div className="flex min-h-screen bg-muted/40">
-      <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
+      <Sidebar 
+        isOpen={isOpen} 
+        onClose={close} 
+        collapsed={collapsed}
+        onToggleCollapse={toggleCollapse}
+      />
       
-      <div className="flex flex-1 flex-col">
-        <Navbar toggleSidebar={toggleSidebar} />
+      <div className={cn(
+        "flex flex-1 flex-col transition-all duration-300 ease-in-out",
+        collapsed ? "md:ml-16" : "md:ml-64"
+      )}>
+        <Navbar 
+          toggleSidebar={toggle} 
+          isSidebarCollapsed={collapsed}
+        />
         
         <main className="flex-1 px-4 py-8 md:px-6 lg:px-8 animate-fade-in">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">

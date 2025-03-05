@@ -1,0 +1,40 @@
+
+.data-table-container {
+  overflow-x: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border-radius: 0.75rem;
+  background-color: white;
+  transition: all 0.3s ease;
+}
+
+.data-table-container:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
+/* Editable cell styles */
+.editable-cell {
+  position: relative;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+}
+
+.editable-cell:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.editable-cell-active {
+  background-color: rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4);
+}
+
+.editable-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: inherit;
+  font-family: inherit;
+  color: inherit;
+}
