@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/auth/useAuth";
 
 const CashFlow = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -23,16 +24,20 @@ const CashFlow = () => {
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [type, setType] = useState("income");
+  const { user } = useAuth();
 
   const { isOpen, toggle, close, collapsed, toggleCollapse } = useSidebar();
 
   // Query for cash flow summary
   const { data: cashFlowSummary, isLoading: summaryLoading, refetch: refetchSummary } = useQuery({
-    queryKey: ['cash-flow-summary'],
+    queryKey: ['cash-flow-summary', user?.id],
     queryFn: async () => {
+      if (!user) return { totalIncome: 0, totalExpenses: 0, netCashFlow: 0, transactionCount: 0 };
+      
       const { data: transactions, error } = await supabase
         .from('cash_transactions')
-        .select('*');
+        .select('*')
+        .eq('user_id', user.id);
       
       if (error) {
         toast({
@@ -59,12 +64,15 @@ const CashFlow = () => {
         transactionCount: transactions?.length || 0
       };
     },
+    enabled: !!user,
   });
 
   // Query for cash flow history
   const { data: cashFlowHistory, isLoading: historyLoading, refetch: refetchHistory } = useQuery({
-    queryKey: ['cash-flow-history', period],
+    queryKey: ['cash-flow-history', period, user?.id],
     queryFn: async () => {
+      if (!user) return [];
+      
       const days = period === 'week' ? 7 : period === 'month' ? 30 : 90;
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - days);
@@ -72,6 +80,7 @@ const CashFlow = () => {
       const { data: transactions, error } = await supabase
         .from('cash_transactions')
         .select('*')
+        .eq('user_id', user.id)
         .gte('created_at', startDate.toISOString())
         .order('created_at', { ascending: true });
       
@@ -106,15 +115,19 @@ const CashFlow = () => {
       
       return Object.values(groupedByDay);
     },
+    enabled: !!user,
   });
 
   // Query for recent transactions
   const { data: recentTransactions, isLoading: transactionsLoading, refetch: refetchTransactions } = useQuery({
-    queryKey: ['recent-transactions'],
+    queryKey: ['recent-transactions', user?.id],
     queryFn: async () => {
+      if (!user) return [];
+      
       const { data, error } = await supabase
         .from('cash_transactions')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(10);
       
@@ -129,11 +142,12 @@ const CashFlow = () => {
       
       return data;
     },
+    enabled: !!user,
   });
 
   // Function to handle adding a new transaction
   const handleAddTransaction = async () => {
-    if (!description || !amount) {
+    if (!description || !amount || !user) {
       toast({
         variant: "destructive",
         title: "Missing information",
@@ -159,7 +173,8 @@ const CashFlow = () => {
           description,
           amount: amountValue,
           type,
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
+          user_id: user.id
         }
       ]);
 
@@ -189,10 +204,12 @@ const CashFlow = () => {
 
   // Setup Supabase realtime subscription
   useEffect(() => {
+    if (!user) return;
+    
     const channel = supabase
       .channel('cash-flow-changes')
       .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'cash_transactions' }, 
+        { event: '*', schema: 'public', table: 'cash_transactions', filter: `user_id=eq.${user.id}` }, 
         (payload) => {
           // Refresh queries when data changes
           refetchSummary();
@@ -205,7 +222,7 @@ const CashFlow = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [refetchSummary, refetchHistory, refetchTransactions]);
+  }, [user, refetchSummary, refetchHistory, refetchTransactions]);
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);

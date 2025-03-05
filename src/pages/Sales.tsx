@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { cn } from "@/lib/utils";
 import { DueCustomersTable } from "@/components/sales/DueCustomersTable";
+import { useAuth } from "@/contexts/auth/useAuth";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
 
@@ -22,10 +22,13 @@ const Sales = () => {
   const [period, setPeriod] = useState("week");
   const { toast } = useToast();
   const { isOpen, toggle, close, collapsed, toggleCollapse } = useSidebar();
+  const { user } = useAuth();
 
   const { data: salesData, isLoading: salesLoading } = useQuery({
-    queryKey: ['sales-data', period],
+    queryKey: ['sales-data', period, user?.id],
     queryFn: async () => {
+      if (!user) return [];
+      
       const daysInPeriod = period === 'week' ? 7 : period === 'month' ? 30 : 90;
       const labels = [];
       const data = [];
@@ -50,6 +53,7 @@ const Sales = () => {
         const { data: ordersForDay, error } = await supabase
           .from('orders')
           .select('total')
+          .eq('user_id', user.id)
           .gte('created_at', startOfDay.toISOString())
           .lt('created_at', endOfDay.toISOString());
           
@@ -68,14 +72,18 @@ const Sales = () => {
       
       return data;
     },
+    enabled: !!user,
   });
 
   const { data: salesSummary, isLoading: summaryLoading } = useQuery({
-    queryKey: ['sales-summary'],
+    queryKey: ['sales-summary', user?.id],
     queryFn: async () => {
+      if (!user) return { totalSales: 0, averageOrderValue: 0, totalOrders: 0, conversionRate: 0 };
+      
       const { data: orders, error } = await supabase
         .from('orders')
-        .select('*');
+        .select('*')
+        .eq('user_id', user.id);
       
       if (error) {
         toast({
@@ -97,14 +105,18 @@ const Sales = () => {
         conversionRate: 15.8,
       };
     },
+    enabled: !!user,
   });
 
   const { data: categoryData, isLoading: categoryLoading } = useQuery({
-    queryKey: ['sales-by-category'],
+    queryKey: ['sales-by-category', user?.id],
     queryFn: async () => {
+      if (!user) return [];
+      
       const { data: products, error } = await supabase
         .from('products')
-        .select('category, price, stock');
+        .select('category, price, stock')
+        .eq('user_id', user.id);
         
       if (error) {
         toast({
@@ -137,15 +149,26 @@ const Sales = () => {
       }));
       
       return formattedData;
-    }
+    },
+    enabled: !!user,
   });
 
   const { data: topProductsData, isLoading: productsLoading } = useQuery({
-    queryKey: ['top-products'],
+    queryKey: ['top-products', user?.id],
     queryFn: async () => {
+      if (!user) return [];
+      
       const { data: orderItems, error } = await supabase
         .from('order_items')
-        .select('product_name, price, quantity');
+        .select(`
+          product_name, 
+          price, 
+          quantity,
+          orders:order_id (
+            user_id
+          )
+        `)
+        .eq('orders.user_id', user.id);
         
       if (error) {
         toast({
@@ -175,7 +198,8 @@ const Sales = () => {
         .slice(0, 5);
       
       return sortedProducts;
-    }
+    },
+    enabled: !!user,
   });
 
   const calculateTrend = () => {
