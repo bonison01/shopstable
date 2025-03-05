@@ -27,13 +27,14 @@ export const DueCustomersTable = () => {
           customer_id,
           payment_due_date,
           payment_status,
+          payment_amount,
           customers (
             name,
             email,
             phone
           )
         `)
-        .eq('payment_status', 'pending')
+        .or('payment_status.eq.pending,payment_status.eq.partial')
         .order('payment_due_date', { ascending: true });
       
       if (error) {
@@ -55,11 +56,17 @@ export const DueCustomersTable = () => {
           daysLeft <= 0 ? "critical" :
           daysLeft <= 3 ? "high" :
           daysLeft <= 7 ? "medium" : "low";
+        
+        // Calculate due amount
+        const dueAmount = order.payment_status === "partial" && order.payment_amount 
+          ? order.total - order.payment_amount 
+          : order.total;
           
         return {
           ...order,
           daysLeft,
-          urgencyLevel
+          urgencyLevel,
+          dueAmount
         };
       });
     },
@@ -67,7 +74,7 @@ export const DueCustomersTable = () => {
 
   const getTotalDueAmount = () => {
     if (!dueOrders) return 0;
-    return dueOrders.reduce((sum, order) => sum + (order.total || 0), 0);
+    return dueOrders.reduce((sum, order) => sum + (order.dueAmount || 0), 0);
   };
 
   const renderUrgencyBadge = (urgencyLevel: string) => {
@@ -116,7 +123,8 @@ export const DueCustomersTable = () => {
               <TableHead>Contact</TableHead>
               <TableHead>Due Date</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
+              <TableHead className="text-right">Due Amount</TableHead>
+              <TableHead className="text-right">Total Amount</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -143,8 +151,14 @@ export const DueCustomersTable = () => {
                     <span className="text-muted-foreground">Not set</span>
                   )}
                 </TableCell>
-                <TableCell>{renderUrgencyBadge(order.urgencyLevel)}</TableCell>
-                <TableCell className="text-right font-medium">{formatCurrency(order.total)}</TableCell>
+                <TableCell>
+                  {renderUrgencyBadge(order.urgencyLevel)}
+                  <div className="text-xs mt-1">
+                    {order.payment_status === 'partial' ? 'Partial Payment' : 'Pending'}
+                  </div>
+                </TableCell>
+                <TableCell className="text-right font-medium">{formatCurrency(order.dueAmount)}</TableCell>
+                <TableCell className="text-right text-muted-foreground">{formatCurrency(order.total)}</TableCell>
               </TableRow>
             ))}
           </TableBody>

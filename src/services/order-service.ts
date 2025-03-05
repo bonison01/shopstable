@@ -70,7 +70,7 @@ export const createOrder = async (order: OrderFormState): Promise<OrderCreationR
 
 export const updateOrder = async (
   orderId: string, 
-  data: { status?: string; payment_status?: string }
+  data: { status?: string; payment_status?: string; payment_amount?: number | null }
 ): Promise<OrderUpdateResult> => {
   try {
     const { error } = await supabase

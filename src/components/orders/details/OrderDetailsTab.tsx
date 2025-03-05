@@ -26,6 +26,17 @@ export function OrderDetailsTab({ order }: OrderDetailsTabProps) {
     </Badge>;
   };
 
+  const calculateDueAmount = () => {
+    if (!order.total) return 0;
+    if (order.payment_status === "paid") return 0;
+    if (order.payment_status === "partial" && order.payment_amount !== null && order.payment_amount !== undefined) {
+      return order.total - order.payment_amount;
+    }
+    return order.total;
+  };
+
+  const dueAmount = calculateDueAmount();
+
   return (
     <div className="space-y-4">
       <Card>
@@ -48,9 +59,23 @@ export function OrderDetailsTab({ order }: OrderDetailsTabProps) {
               isComponent
             />
             {order.payment_status === "partial" && order.payment_amount && (
+              <>
+                <DetailRow 
+                  label="Amount Paid" 
+                  value={formatCurrency(order.payment_amount)} 
+                />
+                <DetailRow 
+                  label="Due Amount" 
+                  value={formatCurrency(dueAmount)}
+                  isBold
+                />
+              </>
+            )}
+            {order.payment_status === "pending" && (
               <DetailRow 
-                label="Amount Paid" 
-                value={formatCurrency(order.payment_amount)} 
+                label="Due Amount" 
+                value={formatCurrency(dueAmount)}
+                isBold
               />
             )}
             <DetailRow label="Total Items" value={order.order_items?.length || 0} />

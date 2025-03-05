@@ -138,6 +138,7 @@ export type Database = {
           customer_id: string
           date: string | null
           id: string
+          payment_amount: number | null
           payment_due_date: string | null
           payment_status: string | null
           status: string | null
@@ -148,6 +149,7 @@ export type Database = {
           customer_id: string
           date?: string | null
           id?: string
+          payment_amount?: number | null
           payment_due_date?: string | null
           payment_status?: string | null
           status?: string | null
@@ -158,6 +160,7 @@ export type Database = {
           customer_id?: string
           date?: string | null
           id?: string
+          payment_amount?: number | null
           payment_due_date?: string | null
           payment_status?: string | null
           status?: string | null

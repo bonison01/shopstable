@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { formatCurrency, formatDate, getStatusColor } from "@/utils/format";
 import { Edit, Eye, Loader2, Save, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Plus } from "lucide-react";
 
 interface EditableOrderData {
   id: string;
@@ -68,6 +69,15 @@ export const OrdersTable = ({
       </div>
     );
   }
+
+  const calculateDueAmount = (order: any) => {
+    if (!order.total) return 0;
+    if (order.payment_status === "paid") return 0;
+    if (order.payment_status === "partial" && order.payment_amount !== null && order.payment_amount !== undefined) {
+      return order.total - order.payment_amount;
+    }
+    return order.total;
+  };
 
   return (
     <div className="data-table-container fade-in">
@@ -161,7 +171,13 @@ export const OrdersTable = ({
                     
                     {order.payment_status === 'partial' && order.payment_amount && (
                       <div className="text-xs mt-1">
-                        Paid: {formatCurrency(order.payment_amount)} / {formatCurrency(order.total)}
+                        <div>Paid: {formatCurrency(order.payment_amount)}</div>
+                        <div>Due: {formatCurrency(calculateDueAmount(order))}</div>
+                      </div>
+                    )}
+                    {order.payment_status === 'pending' && (
+                      <div className="text-xs mt-1">
+                        Due: {formatCurrency(order.total)}
                       </div>
                     )}
                   </div>
@@ -220,6 +236,3 @@ export const OrdersTable = ({
     </div>
   );
 };
-
-// Missing import for Plus icon
-import { Plus } from "lucide-react";
