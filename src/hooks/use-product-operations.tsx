@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,7 +7,20 @@ import * as XLSX from 'xlsx';
 interface Product {
   id: string;
   name: string;
-  // other product properties
+  sku: string;
+  category: string;
+  category_type?: string | null;
+  description?: string | null;
+  price: number;
+  wholesale_price?: number | null;
+  retail_price?: number | null;
+  trainer_price?: number | null;
+  purchased_price?: number | null;
+  stock: number;
+  threshold: number;
+  image_url?: string | null;
+  created_at?: string | null;
+  last_updated?: string | null;
 }
 
 export function useProductOperations(refetchProducts: () => void) {

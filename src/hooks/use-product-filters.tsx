@@ -1,13 +1,23 @@
+
 import { useState } from "react";
 
 interface Product {
   id: string;
   name: string;
   sku: string;
+  category: string;
+  category_type?: string | null;
   description?: string | null;
+  price: number;
+  wholesale_price?: number | null;
+  retail_price?: number | null;
+  trainer_price?: number | null;
+  purchased_price?: number | null;
   stock: number;
   threshold: number;
-  // other properties
+  image_url?: string | null;
+  created_at?: string | null;
+  last_updated?: string | null;
 }
 
 export function useProductFilters() {
