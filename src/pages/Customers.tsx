@@ -1,10 +1,10 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -12,27 +12,34 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { CustomerDetailsDialog } from "@/components/customers/CustomerDetailsDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { cn } from "@/lib/utils";
 import { MoreHorizontal, Plus, Search, Filter, Download, Trash2, Edit, Eye } from "lucide-react";
 
 // Define customer type
-interface Customer {
+export interface Customer {
   id: string;
   name: string;
   email: string;
   phone: string;
+  address: string;
+  customer_type: string;
   status: "active" | "inactive";
   total_orders: number;
   total_spent: number;
   created_at: string;
+  join_date: string;
 }
 
 const Customers = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const { toast } = useToast();
   const { isOpen, toggle, close, collapsed, toggleCollapse } = useSidebar();
 
@@ -62,7 +69,7 @@ const Customers = () => {
   const filteredCustomers = customers?.filter((customer) =>
     customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     customer.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    customer.phone.includes(searchQuery)
+    customer.phone?.includes(searchQuery)
   );
 
   // Handle customer selection
@@ -108,6 +115,18 @@ const Customers = () => {
         description: error.message,
       });
     }
+  };
+
+  // Open customer details dialog
+  const openCustomerDetails = (customerId: string) => {
+    setSelectedCustomerId(customerId);
+    setIsDetailsDialogOpen(true);
+  };
+
+  // Handle customer details dialog close
+  const handleDetailsDialogClose = () => {
+    setSelectedCustomerId(null);
+    setIsDetailsDialogOpen(false);
   };
 
   return (
@@ -231,20 +250,15 @@ const Customers = () => {
                           <TableCell>{customer.email}</TableCell>
                           <TableCell className="hidden md:table-cell">{customer.phone}</TableCell>
                           <TableCell className="hidden md:table-cell">
-                            <span
-                              className={cn(
-                                "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
-                                customer.status === "active"
-                                  ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-                                  : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
-                              )}
+                            <Badge
+                              variant={customer.status === "active" ? "success" : "destructive"}
                             >
                               {customer.status}
-                            </span>
+                            </Badge>
                           </TableCell>
                           <TableCell className="hidden md:table-cell">{customer.total_orders}</TableCell>
                           <TableCell className="text-right">
-                            ${customer.total_spent.toFixed(2)}
+                            ${customer.total_spent?.toFixed(2)}
                           </TableCell>
                           <TableCell>
                             <DropdownMenu>
@@ -255,11 +269,11 @@ const Customers = () => {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => openCustomerDetails(customer.id)}>
                                   <Eye className="h-4 w-4 mr-2" />
                                   View details
                                 </DropdownMenuItem>
-                                <DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => openCustomerDetails(customer.id)}>
                                   <Edit className="h-4 w-4 mr-2" />
                                   Edit customer
                                 </DropdownMenuItem>
@@ -305,6 +319,14 @@ const Customers = () => {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+
+          {/* Customer Details Dialog */}
+          <CustomerDetailsDialog
+            customerId={selectedCustomerId}
+            isOpen={isDetailsDialogOpen}
+            onClose={handleDetailsDialogClose}
+            onCustomerUpdated={refetch}
+          />
         </main>
       </div>
     </div>
