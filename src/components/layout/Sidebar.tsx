@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { 
   BarChart, 
@@ -32,24 +31,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { signOut, isAdmin } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   
-  // Add click handler to close sidebar when clicking outside on mobile
-  useEffect(() => {
-    const handleBodyClick = (e: MouseEvent) => {
-      // Check if we're on mobile by looking at the sidebar's translate state
-      if (isOpen && window.innerWidth < 768) {
-        // Use event delegation to see if the click was outside the sidebar
-        const sidebar = document.getElementById('main-sidebar');
-        if (sidebar && !sidebar.contains(e.target as Node)) {
-          onClose();
-        }
-      }
-    };
-    
-    document.addEventListener('click', handleBodyClick);
-    return () => {
-      document.removeEventListener('click', handleBodyClick);
-    };
-  }, [isOpen, onClose]);
+  // Prevent sidebar clicks from propagating to the global click handler
+  const handleSidebarClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
   
   const mainItems = [
     { name: "Dashboard", path: "/", icon: Home },
@@ -78,6 +63,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
         collapsed ? "w-16" : "w-64"
       )}
+      onClick={handleSidebarClick}
     >
       <div className="flex h-16 items-center gap-2 border-b px-4">
         {!collapsed && <div className="font-semibold text-xl text-primary">CustomerFlow</div>}

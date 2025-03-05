@@ -1,5 +1,5 @@
 
-import { useState, useEffect, RefObject } from "react";
+import { useState, useEffect } from "react";
 
 export function useSidebar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -12,26 +12,31 @@ export function useSidebar() {
     setIsOpen(false);
   };
 
-  const setupOutsideClickHandler = (contentRef: RefObject<HTMLElement>) => {
-    useEffect(() => {
-      const handleClickOutside = (event: MouseEvent) => {
-        if (isOpen && contentRef.current && 
-            contentRef.current.contains(event.target as Node)) {
-          close();
-        }
-      };
-  
-      document.addEventListener('mousedown', handleClickOutside);
+  // Setup a global click handler to close the sidebar when clicking anywhere
+  useEffect(() => {
+    const handleGlobalClick = () => {
+      if (isOpen) {
+        close();
+      }
+    };
+    
+    // Add the event listener with a slight delay to prevent immediate closing
+    // when the toggle button itself is clicked
+    if (isOpen) {
+      const timer = setTimeout(() => {
+        document.addEventListener('click', handleGlobalClick);
+      }, 100);
+      
       return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
+        clearTimeout(timer);
+        document.removeEventListener('click', handleGlobalClick);
       };
-    }, [isOpen, contentRef]);
-  };
+    }
+  }, [isOpen]);
 
   return {
     isOpen,
     toggle,
-    close,
-    setupOutsideClickHandler
+    close
   };
 }

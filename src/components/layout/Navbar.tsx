@@ -32,10 +32,28 @@ export function Navbar({ toggleSidebar }: NavbarProps) {
     return "U";
   };
 
+  // Stop propagation to prevent sidebar closing when clicking on navbar
+  const handleNavbarClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+
+  const handleToggleSidebar = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    toggleSidebar();
+  };
+
   return (
-    <header className="sticky top-0 z-30 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header 
+      className="sticky top-0 z-30 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+      onClick={handleNavbarClick}
+    >
       <div className="container flex h-16 items-center px-4">
-        <Button variant="ghost" size="icon" onClick={toggleSidebar} className="mr-2 md:hidden">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={handleToggleSidebar} 
+          className="mr-2 md:hidden"
+        >
           <Menu className="h-5 w-5" />
           <span className="sr-only">Toggle sidebar</span>
         </Button>
