@@ -1,213 +1,161 @@
 
-import { useState } from "react";
-import { useSidebar } from "@/hooks/use-sidebar";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Separator } from "@/components/ui/separator";
-import { ModeToggle } from "@/components/layout/ModeToggle";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import React from "react";
+import { Link, useLocation } from "react-router-dom";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { X, Home, CreditCard, Users, Package, LineChart, BarChart3, DollarSign, Settings, Users2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
-import {
-  ArrowLeft,
-  BarChart3,
-  ChevronDown,
-  ChevronsUpDown,
-  LayoutDashboard,
-  ListChecks,
-  LogOut,
-  LucideIcon,
-  Settings,
-  ShoppingBag,
-  Users,
-} from 'lucide-react';
 
-interface NavItemProps {
-  name: string;
-  href: string;
-  icon: LucideIcon;
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+  collapsed: boolean;
+  onToggleCollapse: () => void;
 }
 
-const navigationLinks = [
-  {
-    name: 'Dashboard',
-    href: '/',
-    icon: <LayoutDashboard size={18} />,
-  },
-  {
-    name: 'Orders',
-    href: '/orders',
-    icon: <ListChecks size={18} />,
-  },
-  {
-    name: 'Customers',
-    href: '/customers',
-    icon: <ChevronsUpDown size={18} />,
-  },
-  {
-    name: 'Inventory',
-    href: '/inventory',
-    icon: <ShoppingBag size={18} />,
-  },
-  {
-    name: 'Sales',
-    href: '/sales',
-    icon: <BarChart3 size={18} />,
-  },
-  {
-    name: 'Analytics',
-    href: '/analytics',
-    icon: <BarChart3 size={18} />,
-  },
-  {
-    name: 'Cash Flow',
-    href: '/cash-flow',
-    icon: <BarChart3 size={18} />,
-  },
-  {
-    name: 'Staff',
-    href: '/staff',
-    icon: <Users size={18} />,
-  },
-];
+interface NavItemProps {
+  icon: React.ReactNode;
+  label: string;
+  href: string;
+  collapsed: boolean;
+  active?: boolean;
+}
 
-export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: { isOpen: boolean, onClose: () => void, collapsed: boolean, onToggleCollapse: () => void }) {
-  const { user, profile, signOut } = useAuth();
-  const navigate = useNavigate();
+export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: SidebarProps) {
+  const location = useLocation();
+  const { profile } = useAuth();
+  
+  const NavItem = ({ icon, label, href, collapsed, active }: NavItemProps) => (
+    <Link to={href} className="w-full">
+      <Button
+        variant="ghost"
+        className={cn(
+          "flex w-full items-center justify-start gap-3 rounded-md px-3 py-2",
+          "hover:bg-muted",
+          "transition-colors",
+          active ? "bg-muted" : "",
+          collapsed ? "justify-center px-2" : ""
+        )}
+      >
+        {icon}
+        {!collapsed && <span>{label}</span>}
+      </Button>
+    </Link>
+  );
 
-  const handleSignOut = async () => {
-    await signOut();
-    navigate('/auth');
-  };
+  const navigation = [
+    { icon: <Home size={20} />, label: "Dashboard", href: "/" },
+    { icon: <CreditCard size={20} />, label: "Orders", href: "/orders" },
+    { icon: <Users size={20} />, label: "Customers", href: "/customers" },
+    { icon: <Package size={20} />, label: "Inventory", href: "/inventory" },
+    { icon: <LineChart size={20} />, label: "Sales", href: "/sales" },
+    { icon: <BarChart3 size={20} />, label: "Analytics", href: "/analytics" },
+    { icon: <DollarSign size={20} />, label: "Cash Flow", href: "/cash-flow" },
+    { icon: <Users2 size={20} />, label: "Staff", href: "/staff" },
+    { icon: <Settings size={20} />, label: "Settings", href: "/settings" },
+  ];
+
+  const sidebarContent = (
+    <div className="flex h-full flex-col px-2 py-4">
+      <div className="mb-10 flex items-center justify-between border-b pb-4">
+        {!collapsed && (
+          <div>
+            <h2 className="text-lg font-bold">CustomerFlow</h2>
+            {profile?.business_name && (
+              <p className="text-sm text-muted-foreground">{profile.business_name}</p>
+            )}
+          </div>
+        )}
+        {!collapsed && (
+          <Button variant="ghost" size="icon" className="md:hidden" onClick={onClose}>
+            <X size={20} />
+          </Button>
+        )}
+      </div>
+
+      <div className="space-y-1">
+        {navigation.map((item, index) => (
+          <NavItem
+            key={index}
+            icon={item.icon}
+            label={item.label}
+            href={item.href}
+            collapsed={collapsed}
+            active={location.pathname === item.href}
+          />
+        ))}
+      </div>
+
+      <div className="mt-auto space-y-1">
+        <Button
+          variant="ghost"
+          className={cn(
+            "flex w-full items-center justify-start gap-3 rounded-md px-3 py-2",
+            "hover:bg-muted",
+            "transition-colors",
+            collapsed ? "justify-center px-2" : ""
+          )}
+          onClick={onToggleCollapse}
+        >
+          {collapsed ? (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="lucide lucide-panel-right-close"
+            >
+              <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+              <path d="M15 3v18" />
+              <path d="m8 9 3 3-3 3" />
+            </svg>
+          ) : (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="lucide lucide-panel-right-open"
+            >
+              <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+              <path d="M15 3v18" />
+              <path d="m10 15-3-3 3-3" />
+            </svg>
+          )}
+          {!collapsed && <span>Collapse</span>}
+        </Button>
+      </div>
+    </div>
+  );
 
   return (
     <>
+      {/* Mobile Sidebar (Sheet) */}
       <Sheet open={isOpen} onOpenChange={onClose}>
-        <SheetTrigger asChild>
-          <button className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border bg-popover text-popover-foreground hover:bg-secondary h-10 px-4 py-2 md:hidden">Open Menu</button>
-        </SheetTrigger>
-        <SheetContent className="w-full sm:max-w-xs">
-          <SheetHeader>
-            <SheetTitle>Menu</SheetTitle>
-            <SheetDescription>
-              Manage your account preferences, reports, and more.
-            </SheetDescription>
-          </SheetHeader>
-          <div className="grid gap-4">
-            <div className="flex items-center space-x-2">
-              <Avatar>
-                <AvatarImage src={`https://avatar.vercel.sh/${user?.email}.png`} />
-                <AvatarFallback>{profile?.first_name?.[0]}{profile?.last_name?.[0]}</AvatarFallback>
-              </Avatar>
-              <p className="font-medium">{profile?.first_name} {profile?.last_name}</p>
-            </div>
-            <Separator />
-            <Accordion type="single" collapsible>
-              <AccordionItem value="links">
-                <AccordionTrigger className="text-left">
-                  Navigation Links
-                </AccordionTrigger>
-                <AccordionContent>
-                  <div className="grid gap-2">
-                    {navigationLinks.map((link) => (
-                      <a key={link.name} href={link.href} className="flex items-center space-x-2 rounded-md p-2 hover:bg-secondary">
-                        {link.icon}
-                        <span>{link.name}</span>
-                      </a>
-                    ))}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-              <AccordionItem value="reports">
-                <AccordionTrigger className="text-left">
-                  Reports
-                </AccordionTrigger>
-                <AccordionContent>
-                  <div className="grid gap-2">
-                    <a href="#" className="flex items-center space-x-2 rounded-md p-2 hover:bg-secondary">
-                      <BarChart3 size={18} />
-                      <span>Sales Report</span>
-                    </a>
-                    <a href="#" className="flex items-center space-x-2 rounded-md p-2 hover:bg-secondary">
-                      <BarChart3 size={18} />
-                      <span>Inventory Report</span>
-                    </a>
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-            <Separator />
-            <ModeToggle />
-          </div>
+        <SheetContent side="left" className="p-0" closeButton={false}>
+          {sidebarContent}
         </SheetContent>
       </Sheet>
 
-      <div className={`hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 bg-gray-50 border-r dark:bg-gray-800 dark:border-gray-700 transition-transform duration-300 ease-in-out ${collapsed ? '-translate-x-56' : 'translate-x-0'}`}>
-        <div className="flex items-center justify-between h-16 px-4 border-b dark:border-gray-700">
-          <span className="text-lg font-semibold">CustomerFlow</span>
-          <button onClick={onToggleCollapse} className="p-2 text-gray-500 hover:bg-gray-200 rounded-md dark:text-gray-400 dark:hover:bg-gray-700">
-            {collapsed ? <ArrowLeft size={16} /> : <ChevronsUpDown size={16} />}
-          </button>
-        </div>
-        <div className="flex flex-col flex-grow p-4">
-          <nav className="flex-1 space-y-1">
-            {navigationLinks.map((link) => (
-              <a key={link.name} href={link.href} className="flex items-center space-x-2 rounded-md p-2 hover:bg-gray-200 dark:hover:bg-gray-700">
-                {link.icon}
-                <span className={`${collapsed ? 'hidden' : 'block'}`}>{link.name}</span>
-              </a>
-            ))}
-          </nav>
-        </div>
-        <div className="flex items-center justify-between p-4 border-t dark:border-gray-700">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={`https://avatar.vercel.sh/${user?.email}.png`} alt={user?.email || "Avatar"} />
-                  <AvatarFallback>{profile?.first_name?.[0]}{profile?.last_name?.[0]}</AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end" forceMount>
-              <div className="flex flex-col space-y-1.5 p-2">
-                <p className="text-sm font-medium leading-none">{profile?.first_name} {profile?.last_name}</p>
-                <p className="text-xs leading-none text-muted-foreground">
-                  {user?.email}
-                </p>
-              </div>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                Settings
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleSignOut}>
-                Log out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <ModeToggle />
-        </div>
+      {/* Desktop Sidebar */}
+      <div
+        className={cn(
+          "fixed inset-y-0 left-0 z-20 hidden flex-col border-r bg-background md:flex",
+          collapsed ? "w-16" : "w-64"
+        )}
+      >
+        {sidebarContent}
       </div>
     </>
   );

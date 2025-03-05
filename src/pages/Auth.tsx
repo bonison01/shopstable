@@ -13,6 +13,7 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [businessName, setBusinessName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { signIn, signUp } = useAuth();
 
@@ -32,7 +33,7 @@ const Auth = () => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      await signUp(email, password, firstName, lastName);
+      await signUp(email, password, firstName, lastName, businessName);
     } catch (error) {
       console.error("Error signing up:", error);
     } finally {
@@ -120,6 +121,16 @@ const Auth = () => {
                         required
                       />
                     </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="business-name">Company/Business Name</Label>
+                    <Input 
+                      id="business-name"
+                      placeholder="Your company name"
+                      value={businessName}
+                      onChange={(e) => setBusinessName(e.target.value)}
+                      required
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-email">Email</Label>

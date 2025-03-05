@@ -1,20 +1,24 @@
 
-import { useState } from "react";
-import { Bell, Menu, Search, Settings, User, LogOut } from "lucide-react";
+import { Menu, BellDot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+import { ModeToggle } from "./ModeToggle";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
-import { useAuth } from "@/contexts/AuthContext";
-import { cn } from "@/lib/utils";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@/components/ui/avatar";
+import { useNavigate } from "react-router-dom";
 
 interface NavbarProps {
   toggleSidebar: () => void;
@@ -22,147 +26,99 @@ interface NavbarProps {
 }
 
 export function Navbar({ toggleSidebar, isSidebarCollapsed }: NavbarProps) {
-  const [searchValue, setSearchValue] = useState("");
   const { user, profile, signOut } = useAuth();
-
+  const navigate = useNavigate();
+  
+  // Get user initials for avatar
   const getInitials = () => {
     if (profile?.first_name && profile?.last_name) {
       return `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase();
-    } else if (user?.email) {
-      return user.email[0].toUpperCase();
     }
-    return "U";
-  };
-
-  // Stop propagation to prevent sidebar closing when clicking on navbar
-  const handleNavbarClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-  };
-
-  const handleToggleSidebar = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    toggleSidebar();
+    return user?.email?.substring(0, 2).toUpperCase() || "U";
   };
 
   return (
-    <header 
-      className={cn(
-        "sticky top-0 z-30 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-all duration-300 ease-in-out",
-        isSidebarCollapsed ? "md:ml-16" : "md:ml-64"
-      )}
-      onClick={handleNavbarClick}
-    >
-      <div className="container flex h-16 items-center px-4">
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={handleToggleSidebar} 
-          className="mr-2 md:hidden"
-        >
+    <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
+      <div className="flex items-center">
+        <Button variant="ghost" size="icon" onClick={toggleSidebar} className="mr-2 md:hidden">
           <Menu className="h-5 w-5" />
-          <span className="sr-only">Toggle sidebar</span>
         </Button>
-        
-        <div className="md:hidden font-semibold">CustomerFlow</div>
-        
-        <div className="flex flex-1 items-center justify-end space-x-2 md:justify-between">
-          <div className="hidden md:flex md:flex-1 md:items-center md:space-x-2">
-            <div className="relative w-full max-w-md">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search..."
-                className="pl-8 md:w-[300px] lg:w-[400px]"
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-              />
-            </div>
-          </div>
-          
-          <div className="flex items-center space-x-1">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative">
-                  <Bell className="h-5 w-5" />
-                  <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center">3</Badge>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[300px]">
-                <div className="flex items-center justify-between p-2">
-                  <p className="text-sm font-medium">Notifications</p>
-                  <Button variant="ghost" size="sm" className="text-xs">Mark all as read</Button>
-                </div>
-                <DropdownMenuSeparator />
-                {[1, 2, 3].map((i) => (
-                  <DropdownMenuItem key={i} className="p-0">
-                    <div className="flex w-full flex-col px-2 py-1.5 hover:bg-muted/50 cursor-pointer">
-                      <div className="flex items-start justify-between">
-                        <p className="text-sm font-medium">New order from Customer {i}</p>
-                        <p className="text-xs text-muted-foreground">{i}h ago</p>
-                      </div>
-                      <p className="text-xs text-muted-foreground">Order #{1000 + i} has been placed</p>
-                    </div>
-                  </DropdownMenuItem>
-                ))}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="p-2 justify-center">
-                  <p className="text-sm text-primary cursor-pointer">View all notifications</p>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <Settings className="h-5 w-5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem>Settings</DropdownMenuItem>
-                <DropdownMenuItem>App Preferences</DropdownMenuItem>
-                <DropdownMenuItem>Help & Support</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
 
-            <Separator orientation="vertical" className="mx-1 h-8" />
-            
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback>{getInitials()}</AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <div className="flex items-center justify-start gap-2 p-2">
-                  <div className="flex flex-col space-y-1 leading-none">
-                    <p className="font-medium">
-                      {profile?.first_name 
-                        ? `${profile.first_name} ${profile.last_name || ''}`
-                        : user?.email || 'User'}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{user?.email}</p>
-                  </div>
-                </div>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <User className="mr-2 h-4 w-4" />
-                  <span>Profile</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Settings</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => signOut()}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Logout</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+        <div className={cn("mr-4 flex items-center", isSidebarCollapsed ? "md:ml-0" : "md:hidden")}>
+          <span className="font-bold">CustomerFlow</span>
+          {profile?.business_name && (
+            <span className="ml-2 text-sm text-muted-foreground">
+              | {profile.business_name}
+            </span>
+          )}
         </div>
+      </div>
+
+      <div className="relative hidden flex-1 md:flex">
+        <Input
+          type="search"
+          placeholder="Search..."
+          className="w-full max-w-[500px] pl-9"
+        />
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="absolute left-3 top-1/2 -translate-y-1/2 transform text-muted-foreground"
+        >
+          <circle cx="11" cy="11" r="8" />
+          <path d="m21 21-4.3-4.3" />
+        </svg>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Button variant="ghost" size="icon" aria-label="Notifications">
+          <BellDot className="h-5 w-5" />
+        </Button>
+
+        <ModeToggle />
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+              <Avatar className="h-9 w-9">
+                <AvatarImage src="" alt={profile?.first_name || user?.email} />
+                <AvatarFallback>{getInitials()}</AvatarFallback>
+              </Avatar>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-56" align="end" forceMount>
+            <DropdownMenuLabel className="font-normal">
+              <div className="flex flex-col space-y-1">
+                <p className="text-sm font-medium leading-none">
+                  {profile?.first_name ? `${profile.first_name} ${profile.last_name}` : "User"}
+                </p>
+                <p className="text-xs leading-none text-muted-foreground">
+                  {user?.email}
+                </p>
+                {profile?.business_name && (
+                  <p className="text-xs font-medium text-muted-foreground">
+                    {profile.business_name}
+                  </p>
+                )}
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => navigate("/settings")}>
+              Settings
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={signOut}>
+              Log out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );

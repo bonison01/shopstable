@@ -11,6 +11,7 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Staff from './pages/Staff';
+import Settings from './pages/Settings';
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/cash-flow" element={<CashFlow />} />
         <Route path="/staff" element={<Staff />} />
+        <Route path="/settings" element={<Settings />} />
       </Route>
       <Route path="/auth" element={<Auth />} />
       <Route path="*" element={<NotFound />} />

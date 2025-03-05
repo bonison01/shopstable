@@ -11,9 +11,10 @@ type AuthContextType = {
   profile: any | null;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, firstName: string, lastName: string) => Promise<void>;
+  signUp: (email: string, password: string, firstName: string, lastName: string, businessName: string) => Promise<void>;
   signOut: () => Promise<void>;
   isAdmin: boolean;
+  updateBusinessName: (businessName: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -113,7 +114,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signUp = async (email: string, password: string, firstName: string, lastName: string) => {
+  const signUp = async (email: string, password: string, firstName: string, lastName: string, businessName: string) => {
     try {
       setIsLoading(true);
       const { error } = await supabase.auth.signUp({
@@ -123,6 +124,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           data: {
             first_name: firstName,
             last_name: lastName,
+            business_name: businessName,
           },
         },
       });
@@ -143,6 +145,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: error.message,
       });
       throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateBusinessName = async (businessName: string) => {
+    if (!user) return;
+    
+    setIsLoading(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ business_name: businessName })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setProfile(prev => ({
+        ...prev,
+        business_name: businessName
+      }));
+
+      toast({
+        title: "Business name updated",
+        description: "Your business name has been successfully updated",
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Update failed",
+        description: error.message,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -181,6 +216,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signUp,
     signOut,
     isAdmin,
+    updateBusinessName,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
