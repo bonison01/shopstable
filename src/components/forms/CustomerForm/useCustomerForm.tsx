@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -53,7 +54,8 @@ export const useCustomerForm = (onSuccess?: () => void) => {
 
   const saveCustomer = async () => {
     try {
-      // Check if email already exists
+      // Check if email already exists for this user
+      // We're now only checking for duplicates with the same user_id
       const { data: existingCustomer } = await supabase
         .from('customers')
         .select('id')
@@ -62,7 +64,7 @@ export const useCustomerForm = (onSuccess?: () => void) => {
         .maybeSingle();
 
       if (existingCustomer) {
-        throw new Error("A customer with this email already exists");
+        throw new Error("A customer with this email already exists in your account");
       }
 
       // Insert to Supabase

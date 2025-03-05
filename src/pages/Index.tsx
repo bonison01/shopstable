@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -37,6 +38,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/auth/useAuth";
 
 interface RecentActivity {
   id: string;
@@ -64,17 +66,20 @@ const orderStatusColors = {
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
 
 const Index = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
   const [salesData, setSalesData] = useState<any[]>([]);
+  const { user, profile } = useAuth();
 
   const { data: dashboardData, isLoading } = useQuery({
-    queryKey: ['dashboard-data'],
+    queryKey: ['dashboard-data', user?.id],
     queryFn: async () => {
+      if (!user) return null;
+      
       const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
-        .select('*');
+        .select('*')
+        .eq('user_id', user.id);
       
       if (ordersError) {
         console.error("Error fetching orders:", ordersError);
@@ -83,7 +88,8 @@ const Index = () => {
 
       const { data: customersData, error: customersError } = await supabase
         .from('customers')
-        .select('*');
+        .select('*')
+        .eq('user_id', user.id);
 
       if (customersError) {
         console.error("Error fetching customers:", customersError);
@@ -92,7 +98,8 @@ const Index = () => {
 
       const { data: productsData, error: productsError } = await supabase
         .from('products')
-        .select('*');
+        .select('*')
+        .eq('user_id', user.id);
 
       if (productsError) {
         console.error("Error fetching products:", productsError);
@@ -124,17 +131,23 @@ const Index = () => {
         pendingOrders,
         orderStatusData
       };
-    }
+    },
+    enabled: !!user, // Only run when user is authenticated
   });
 
   const { isOpen, toggle, close, collapsed, toggleCollapse } = useSidebar();
 
   useEffect(() => {
+    if (!user) return;
+    
     const fetchRecentActivity = async () => {
       try {
         const { data: recentOrders, error: ordersError } = await supabase
           .from('orders')
-          .select('id, date, total, status, customer_id, customers(name)')
+          .select(`
+            id, date, total, status, customer_id, customers(name)
+          `)
+          .eq('user_id', user.id)
           .order('date', { ascending: false })
           .limit(3);
         
@@ -143,6 +156,7 @@ const Index = () => {
         const { data: recentCustomers, error: customersError } = await supabase
           .from('customers')
           .select('id, name, created_at')
+          .eq('user_id', user.id)
           .order('created_at', { ascending: false })
           .limit(2);
         
@@ -184,7 +198,11 @@ const Index = () => {
       try {
         const { data: orderItems, error: orderItemsError } = await supabase
           .from('order_items')
-          .select('product_id, product_name, quantity');
+          .select(`
+            product_id, product_name, quantity, order_id,
+            orders!inner(user_id)
+          `)
+          .eq('orders.user_id', user.id);
         
         if (orderItemsError) throw orderItemsError;
         
@@ -214,7 +232,7 @@ const Index = () => {
           id: product.id,
           name: product.name,
           sales: product.quantity,
-          percentage: Math.round((product.quantity / totalSales) * 100)
+          percentage: Math.round((product.quantity / (totalSales || 1)) * 100)
         }));
         
         setTopProducts(formattedTopProducts);
@@ -232,6 +250,7 @@ const Index = () => {
         const { data: orders, error } = await supabase
           .from('orders')
           .select('date, total')
+          .eq('user_id', user.id)
           .gte('date', startDate.toISOString())
           .lte('date', endDate.toISOString());
         
@@ -268,15 +287,7 @@ const Index = () => {
     fetchRecentActivity();
     fetchTopProducts();
     fetchSalesData();
-  }, []);
-
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
-
-  const closeSidebar = () => {
-    setSidebarOpen(false);
-  };
+  }, [user]);
 
   const calculateTrend = () => {
     if (salesData.length < 2) return 0;
@@ -311,7 +322,7 @@ const Index = () => {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
             <div>
               <h1 className="text-3xl font-bold tracking-tight mb-1">Dashboard</h1>
-              <p className="text-muted-foreground">Welcome back, Admin User</p>
+              <p className="text-muted-foreground">Welcome back, {profile?.first_name || 'User'}</p>
             </div>
             <div className="flex gap-2 mt-4 md:mt-0">
               <Button>
