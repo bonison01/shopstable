@@ -187,9 +187,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     try {
       const { error } = await supabase.auth.signOut();
-      if (error) {
-        throw error;
-      }
+      
+      // Even if there's an error (like session not found), we should still
+      // clear the local state and redirect the user to the auth page
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+      setIsAdmin(false);
       
       navigate('/auth');
       toast({
