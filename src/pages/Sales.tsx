@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -114,7 +115,7 @@ const Sales = () => {
         throw error;
       }
       
-      const categorySales = {};
+      const categorySales: Record<string, number> = {};
       
       products?.forEach(product => {
         const category = product.category;
@@ -127,7 +128,8 @@ const Sales = () => {
         categorySales[category] += productValue;
       });
       
-      const totalValue = Object.values(categorySales).reduce((sum: any, val: any) => sum + val, 0);
+      // Fix the type issue in the reduce function
+      const totalValue = Object.values(categorySales).reduce((sum: number, val: number) => sum + val, 0);
       
       const formattedData = Object.keys(categorySales).map(category => ({
         name: category,
