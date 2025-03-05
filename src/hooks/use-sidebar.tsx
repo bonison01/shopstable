@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, RefObject } from "react";
 
 export function useSidebar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -34,9 +34,16 @@ export function useSidebar() {
     }
   }, [isOpen]);
 
+  // This is just a placeholder function to maintain compatibility with existing code
+  const setupOutsideClickHandler = (contentRef: RefObject<HTMLElement>) => {
+    // The actual click handling is now done in the useEffect above
+    // This function exists just to maintain the API for existing code
+  };
+
   return {
     isOpen,
     toggle,
-    close
+    close,
+    setupOutsideClickHandler
   };
 }
