@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -62,7 +61,6 @@ const AddStaffForm = ({ onSuccess }: { onSuccess?: () => void }) => {
       }
 
       // Insert to Supabase
-      // Even though we have a database trigger, we need to provide user_id for TypeScript
       if (!user?.id) {
         throw new Error("You must be logged in to add a staff member");
       }
@@ -75,7 +73,7 @@ const AddStaffForm = ({ onSuccess }: { onSuccess?: () => void }) => {
           last_name: staff.last_name,
           role: staff.role,
           status: staff.status,
-          user_id: user.id // Explicitly set user_id to match TypeScript requirements
+          user_id: user.id
         })
         .select();
 
