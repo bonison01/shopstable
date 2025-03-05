@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,14 +33,24 @@ import {
   LineChart,
   Line
 } from "recharts";
-import { 
-  recentActivity, 
-  salesData,
-  topProducts
-} from "@/data/mockData";
-import { formatCurrency } from "@/utils/format";
+import { formatCurrency, formatDate } from "@/utils/format";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
+
+interface RecentActivity {
+  id: string;
+  type: string;
+  message: string;
+  time: string;
+  created_at: string;
+}
+
+interface TopProduct {
+  id: string;
+  name: string;
+  sales: number;
+  percentage: number;
+}
 
 const orderStatusColors = {
   pending: "#f59e0b",
@@ -54,6 +64,9 @@ const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
 
 const Index = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
+  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
+  const [salesData, setSalesData] = useState<any[]>([]);
 
   const { data: dashboardData, isLoading } = useQuery({
     queryKey: ['dashboard-data'],
@@ -118,13 +131,179 @@ const Index = () => {
     }
   });
 
+  useEffect(() => {
+    // Get recent activity data from orders, customer creation, etc.
+    const fetchRecentActivity = async () => {
+      try {
+        // Fetch recent orders
+        const { data: recentOrders, error: ordersError } = await supabase
+          .from('orders')
+          .select('id, date, total, status, customer_id, customers(name)')
+          .order('date', { ascending: false })
+          .limit(3);
+        
+        if (ordersError) throw ordersError;
+
+        // Fetch recent customers
+        const { data: recentCustomers, error: customersError } = await supabase
+          .from('customers')
+          .select('id, name, created_at')
+          .order('created_at', { ascending: false })
+          .limit(2);
+        
+        if (customersError) throw customersError;
+
+        // Combine and format data
+        const activities: RecentActivity[] = [];
+
+        // Add orders as activities
+        recentOrders?.forEach((order: any) => {
+          activities.push({
+            id: order.id,
+            type: 'new_order',
+            message: `New order (${formatCurrency(order.total)}) from ${order.customers?.name || 'Unknown Customer'}`,
+            time: formatDate(order.date),
+            created_at: order.date
+          });
+        });
+
+        // Add new customers as activities
+        recentCustomers?.forEach((customer: any) => {
+          activities.push({
+            id: customer.id,
+            type: 'new_customer',
+            message: `New customer ${customer.name} registered`,
+            time: formatDate(customer.created_at),
+            created_at: customer.created_at
+          });
+        });
+
+        // Sort by date (newest first) and take top 5
+        activities.sort((a, b) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+
+        setRecentActivity(activities.slice(0, 5));
+      } catch (error) {
+        console.error("Error fetching recent activity:", error);
+      }
+    };
+
+    // Get top selling products data
+    const fetchTopProducts = async () => {
+      try {
+        // First, get all order items
+        const { data: orderItems, error: orderItemsError } = await supabase
+          .from('order_items')
+          .select('product_id, product_name, quantity');
+        
+        if (orderItemsError) throw orderItemsError;
+        
+        // Calculate sales per product
+        const productSales: Record<string, { id: string, name: string, quantity: number }> = {};
+        
+        orderItems?.forEach((item: any) => {
+          if (!item.product_id) return;
+          
+          if (!productSales[item.product_id]) {
+            productSales[item.product_id] = {
+              id: item.product_id,
+              name: item.product_name,
+              quantity: 0
+            };
+          }
+          
+          productSales[item.product_id].quantity += item.quantity;
+        });
+        
+        // Convert to array and sort by quantity
+        const sortedProducts = Object.values(productSales)
+          .sort((a, b) => b.quantity - a.quantity)
+          .slice(0, 5);
+        
+        // Calculate percentage for chart display
+        const totalSales = sortedProducts.reduce((sum, product) => sum + product.quantity, 0);
+        
+        const formattedTopProducts = sortedProducts.map(product => ({
+          id: product.id,
+          name: product.name,
+          sales: product.quantity,
+          percentage: Math.round((product.quantity / totalSales) * 100)
+        }));
+        
+        setTopProducts(formattedTopProducts);
+      } catch (error) {
+        console.error("Error fetching top products:", error);
+      }
+    };
+
+    // Get sales data for the chart
+    const fetchSalesData = async () => {
+      try {
+        // Get orders from the last 12 months
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setMonth(startDate.getMonth() - 11); // 12 months including current month
+        
+        const { data: orders, error } = await supabase
+          .from('orders')
+          .select('date, total')
+          .gte('date', startDate.toISOString())
+          .lte('date', endDate.toISOString());
+        
+        if (error) throw error;
+        
+        // Aggregate sales by month
+        const monthlySales: Record<string, number> = {};
+        
+        // Initialize all months with 0
+        for (let i = 0; i < 12; i++) {
+          const date = new Date();
+          date.setMonth(date.getMonth() - i);
+          const monthKey = date.toLocaleString('en-US', { month: 'short', year: 'numeric' });
+          monthlySales[monthKey] = 0;
+        }
+        
+        // Add actual sales data
+        orders?.forEach((order: any) => {
+          const orderDate = new Date(order.date);
+          const monthKey = orderDate.toLocaleString('en-US', { month: 'short', year: 'numeric' });
+          
+          if (monthlySales[monthKey] !== undefined) {
+            monthlySales[monthKey] += order.total;
+          }
+        });
+        
+        // Convert to array format for chart
+        const salesChartData = Object.entries(monthlySales)
+          .map(([month, sales]) => ({ month, sales }))
+          .reverse(); // Chronological order
+        
+        setSalesData(salesChartData);
+      } catch (error) {
+        console.error("Error fetching sales data:", error);
+      }
+    };
+
+    fetchRecentActivity();
+    fetchTopProducts();
+    fetchSalesData();
+  }, []);
+
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };
 
-  // Calculate percentage increase trend (mock data for now)
+  // Calculate percentage increase trend
   const calculateTrend = () => {
-    return 12.5; // Example trend value
+    if (salesData.length < 2) return 0;
+    
+    const currentMonth = salesData[salesData.length - 1].sales;
+    const previousMonth = salesData[salesData.length - 2].sales;
+    
+    if (previousMonth === 0) return 100; // Avoid division by zero
+    
+    return ((currentMonth - previousMonth) / previousMonth * 100).toFixed(1);
   };
 
   return (
@@ -174,7 +353,7 @@ const Index = () => {
               title="Total Revenue"
               value={isLoading ? "-" : formatCurrency(dashboardData?.totalRevenue || 0)}
               icon={<Banknote className="h-5 w-5" />}
-              trend={{ value: 8.2, isPositive: true }}
+              trend={{ value: parseFloat(calculateTrend() as string) || 0, isPositive: parseFloat(calculateTrend() as string) >= 0 }}
               className="stagger-delay-4"
             />
           </div>
@@ -196,53 +375,65 @@ const Index = () => {
               <CardContent>
                 <Tabs defaultValue="chart">
                   <TabsContent value="chart" className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={salesData}>
-                        <XAxis dataKey="month" />
-                        <YAxis
-                          tickFormatter={(value) =>
-                            new Intl.NumberFormat("en-US", {
-                              notation: "compact",
-                              compactDisplay: "short",
-                            }).format(value)
-                          }
-                        />
-                        <RechartsTooltip
-                          formatter={(value: number) =>
-                            formatCurrency(value)
-                          }
-                        />
-                        <Bar dataKey="sales" fill="#2563eb" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                    {salesData.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={salesData}>
+                          <XAxis dataKey="month" />
+                          <YAxis
+                            tickFormatter={(value) =>
+                              new Intl.NumberFormat("en-US", {
+                                notation: "compact",
+                                compactDisplay: "short",
+                              }).format(value)
+                            }
+                          />
+                          <RechartsTooltip
+                            formatter={(value: number) =>
+                              formatCurrency(value)
+                            }
+                          />
+                          <Bar dataKey="sales" fill="#2563eb" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <p className="text-muted-foreground">Loading sales data...</p>
+                      </div>
+                    )}
                   </TabsContent>
                   <TabsContent value="trend" className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={salesData}>
-                        <XAxis dataKey="month" />
-                        <YAxis
-                          tickFormatter={(value) =>
-                            new Intl.NumberFormat("en-US", {
-                              notation: "compact",
-                              compactDisplay: "short",
-                            }).format(value)
-                          }
-                        />
-                        <RechartsTooltip
-                          formatter={(value: number) =>
-                            formatCurrency(value)
-                          }
-                        />
-                        <Line 
-                          type="monotone" 
-                          dataKey="sales" 
-                          stroke="#2563eb" 
-                          strokeWidth={2}
-                          dot={{ r: 3 }}
-                          activeDot={{ r: 5 }}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
+                    {salesData.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={salesData}>
+                          <XAxis dataKey="month" />
+                          <YAxis
+                            tickFormatter={(value) =>
+                              new Intl.NumberFormat("en-US", {
+                                notation: "compact",
+                                compactDisplay: "short",
+                              }).format(value)
+                            }
+                          />
+                          <RechartsTooltip
+                            formatter={(value: number) =>
+                              formatCurrency(value)
+                            }
+                          />
+                          <Line 
+                            type="monotone" 
+                            dataKey="sales" 
+                            stroke="#2563eb" 
+                            strokeWidth={2}
+                            dot={{ r: 3 }}
+                            activeDot={{ r: 5 }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <p className="text-muted-foreground">Loading sales data...</p>
+                      </div>
+                    )}
                   </TabsContent>
                 </Tabs>
               </CardContent>
@@ -328,7 +519,7 @@ const Index = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {recentActivity.map((activity) => {
+                  {recentActivity.length > 0 ? recentActivity.map((activity) => {
                     const icons = {
                       new_order: <ShoppingCart className="h-8 w-8 text-blue-500" />,
                       payment: <Banknote className="h-8 w-8 text-green-500" />,
@@ -354,7 +545,11 @@ const Index = () => {
                         </div>
                       </div>
                     );
-                  })}
+                  }) : (
+                    <div className="text-center py-6 text-muted-foreground">
+                      <p>No recent activity found</p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -374,8 +569,8 @@ const Index = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {topProducts.map((product, index) => (
-                    <div key={index} className="flex items-center">
+                  {topProducts.length > 0 ? topProducts.map((product, index) => (
+                    <div key={product.id} className="flex items-center">
                       <div
                         className="mr-4 h-2 w-2 rounded-full"
                         style={{ backgroundColor: COLORS[index % COLORS.length] }}
@@ -405,7 +600,11 @@ const Index = () => {
                         </div>
                       </div>
                     </div>
-                  ))}
+                  )) : (
+                    <div className="text-center py-6 text-muted-foreground">
+                      <p>No product sales data available</p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

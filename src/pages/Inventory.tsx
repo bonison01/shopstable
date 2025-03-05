@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,7 +19,6 @@ import {
   XCircle, 
   Edit, 
   Trash, 
-  FileSpreadsheet,
   Download,
   Upload
 } from "lucide-react";
@@ -34,6 +34,7 @@ import {
   DialogClose
 } from "@/components/ui/dialog";
 import AddProductForm from "@/components/forms/AddProductForm";
+import EditProductForm from "@/components/forms/EditProductForm";
 import * as XLSX from 'xlsx';
 
 interface Product {
@@ -84,6 +85,7 @@ const Inventory = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [stockFilter, setStockFilter] = useState("all");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -147,6 +149,11 @@ const Inventory = () => {
 
   const handleAddProduct = () => {
     setAddDialogOpen(false);
+    refetch();
+  };
+
+  const handleEditProduct = () => {
+    setEditDialogOpen(false);
     refetch();
   };
 
@@ -500,7 +507,15 @@ const Inventory = () => {
                       </div>
                       
                       <div className="flex gap-2 mt-4">
-                        <Button variant="outline" size="sm" className="flex-1">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="flex-1"
+                          onClick={() => {
+                            setSelectedProduct(product);
+                            setEditDialogOpen(true);
+                          }}
+                        >
                           <Edit className="h-4 w-4 mr-2" />
                           Edit
                         </Button>
@@ -541,6 +556,24 @@ const Inventory = () => {
                   Delete
                 </Button>
               </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          
+          <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+            <DialogContent className="sm:max-w-[600px]">
+              <DialogHeader>
+                <DialogTitle>Edit Product</DialogTitle>
+                <DialogDescription>
+                  Update the details of your product.
+                </DialogDescription>
+              </DialogHeader>
+              {selectedProduct && (
+                <EditProductForm 
+                  product={selectedProduct} 
+                  onSuccess={handleEditProduct} 
+                  onCancel={() => setEditDialogOpen(false)} 
+                />
+              )}
             </DialogContent>
           </Dialog>
           
