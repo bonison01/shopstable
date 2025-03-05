@@ -9,11 +9,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts";
 import { formatCurrency } from "@/utils/format";
-import { Calendar, Download, TrendingUp, Users, Package, ShoppingCart, Banknote } from "lucide-react";
+import { Calendar, Download, TrendingUp, Users, Package, ShoppingCart, Banknote, Clock } from "lucide-react";
 import { StatsCard } from "@/components/ui/StatsCard";
 import { useToast } from "@/hooks/use-toast";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { cn } from "@/lib/utils";
+import { DueCustomersTable } from "@/components/sales/DueCustomersTable";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
 
@@ -40,9 +41,29 @@ const Sales = () => {
           labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
         }
         
+        // Get actual data for this date
+        const startOfDay = new Date(date);
+        startOfDay.setHours(0, 0, 0, 0);
+        
+        const endOfDay = new Date(date);
+        endOfDay.setHours(23, 59, 59, 999);
+        
+        const { data: ordersForDay, error } = await supabase
+          .from('orders')
+          .select('total')
+          .gte('created_at', startOfDay.toISOString())
+          .lt('created_at', endOfDay.toISOString());
+          
+        if (error) {
+          console.error("Error fetching sales data:", error);
+          throw error;
+        }
+        
+        const dayTotal = ordersForDay?.reduce((sum, order) => sum + (order.total || 0), 0) || 0;
+        
         data.push({
           date: labels[i],
-          sales: Math.floor(Math.random() * 5000) + 1000,
+          sales: dayTotal,
         });
       }
       
@@ -77,6 +98,91 @@ const Sales = () => {
         conversionRate: 15.8,
       };
     },
+  });
+
+  // Fetch category data from the database
+  const { data: categoryData, isLoading: categoryLoading } = useQuery({
+    queryKey: ['sales-by-category'],
+    queryFn: async () => {
+      const { data: products, error } = await supabase
+        .from('products')
+        .select('category, price, stock');
+        
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Error fetching category data",
+          description: error.message,
+        });
+        throw error;
+      }
+      
+      // Calculate sales value by category (price * stock)
+      const categorySales = {};
+      
+      products?.forEach(product => {
+        const category = product.category;
+        const productValue = product.price * product.stock;
+        
+        if (!categorySales[category]) {
+          categorySales[category] = 0;
+        }
+        
+        categorySales[category] += productValue;
+      });
+      
+      // Calculate total for percentages
+      const totalValue = Object.values(categorySales).reduce((sum: any, val: any) => sum + val, 0);
+      
+      // Format for pie chart
+      const formattedData = Object.keys(categorySales).map(category => ({
+        name: category,
+        value: Math.round((categorySales[category] / totalValue) * 100)
+      }));
+      
+      return formattedData;
+    }
+  });
+
+  // Fetch top products data from the database
+  const { data: topProductsData, isLoading: productsLoading } = useQuery({
+    queryKey: ['top-products'],
+    queryFn: async () => {
+      const { data: orderItems, error } = await supabase
+        .from('order_items')
+        .select('product_name, price, quantity');
+        
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Error fetching product data",
+          description: error.message,
+        });
+        throw error;
+      }
+      
+      // Calculate sales by product
+      const productSales = {};
+      
+      orderItems?.forEach(item => {
+        const productName = item.product_name;
+        const itemValue = item.price * item.quantity;
+        
+        if (!productSales[productName]) {
+          productSales[productName] = 0;
+        }
+        
+        productSales[productName] += itemValue;
+      });
+      
+      // Sort and get top 5
+      const sortedProducts = Object.keys(productSales)
+        .map(name => ({ name, sales: productSales[name] }))
+        .sort((a, b) => b.sales - a.sales)
+        .slice(0, 5);
+      
+      return sortedProducts;
+    }
   });
 
   const calculateTrend = () => {
@@ -221,58 +327,57 @@ const Sales = () => {
               </CardHeader>
               <CardContent>
                 <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={[
-                          { name: 'Electronics', value: 40 },
-                          { name: 'Accessories', value: 30 },
-                          { name: 'Furniture', value: 15 },
-                          { name: 'Clothing', value: 10 },
-                          { name: 'Other', value: 5 },
-                        ]}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={80}
-                        paddingAngle={5}
-                        dataKey="value"
-                        label={({
-                          cx,
-                          cy,
-                          midAngle,
-                          innerRadius,
-                          outerRadius,
-                          name,
-                          value,
-                          index,
-                        }) => {
-                          const RADIAN = Math.PI / 180;
-                          const radius = 25 + innerRadius + (outerRadius - innerRadius);
-                          const x = cx + radius * Math.cos(-midAngle * RADIAN);
-                          const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                  {categoryLoading ? (
+                    <div className="flex justify-center items-center h-full">
+                      <div className="animate-pulse">Loading category data...</div>
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={categoryData || []}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={80}
+                          paddingAngle={5}
+                          dataKey="value"
+                          label={({
+                            cx,
+                            cy,
+                            midAngle,
+                            innerRadius,
+                            outerRadius,
+                            name,
+                            value,
+                          }) => {
+                            const RADIAN = Math.PI / 180;
+                            const radius = 25 + innerRadius + (outerRadius - innerRadius);
+                            const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                            const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
-                          return (
-                            <text
-                              x={x}
-                              y={y}
-                              textAnchor={x > cx ? "start" : "end"}
-                              dominantBaseline="central"
-                              fill="#888888"
-                              fontSize="12"
-                            >
-                              {name} ({value}%)
-                            </text>
-                          );
-                        }}
-                      >
-                        {([...Array(5)]).map((_, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <RechartsTooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
+                            return (
+                              <text
+                                x={x}
+                                y={y}
+                                textAnchor={x > cx ? "start" : "end"}
+                                dominantBaseline="central"
+                                fill="#888888"
+                                fontSize="12"
+                              >
+                                {name} ({value}%)
+                              </text>
+                            );
+                          }}
+                        >
+                          {(categoryData || []).map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <RechartsTooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -284,34 +389,49 @@ const Sales = () => {
               </CardHeader>
               <CardContent>
                 <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={[
-                        { name: 'Premium Headphones', sales: 12000 },
-                        { name: 'Ultra HD Monitor', sales: 9500 },
-                        { name: 'Ergonomic Keyboard', sales: 7200 },
-                        { name: 'Wireless Mouse', sales: 6400 },
-                        { name: 'Laptop Stand', sales: 4800 },
-                      ]}
-                      layout="vertical"
-                      margin={{ top: 20, right: 30, left: 100, bottom: 5 }}
-                    >
-                      <XAxis type="number" 
-                        tickFormatter={(value) => 
-                          new Intl.NumberFormat('en-US', {
-                            notation: 'compact',
-                            compactDisplay: 'short',
-                          }).format(value)
-                        }
-                      />
-                      <YAxis type="category" dataKey="name" width={100} />
-                      <RechartsTooltip
-                        formatter={(value: number) => [formatCurrency(value), 'Sales']}
-                      />
-                      <Bar dataKey="sales" fill="#2563eb" radius={[0, 4, 4, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  {productsLoading ? (
+                    <div className="flex justify-center items-center h-full">
+                      <div className="animate-pulse">Loading product data...</div>
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={topProductsData || []}
+                        layout="vertical"
+                        margin={{ top: 20, right: 30, left: 100, bottom: 5 }}
+                      >
+                        <XAxis type="number" 
+                          tickFormatter={(value) => 
+                            new Intl.NumberFormat('en-US', {
+                              notation: 'compact',
+                              compactDisplay: 'short',
+                            }).format(value)
+                          }
+                        />
+                        <YAxis type="category" dataKey="name" width={100} />
+                        <RechartsTooltip
+                          formatter={(value: number) => [formatCurrency(value), 'Sales']}
+                        />
+                        <Bar dataKey="sales" fill="#2563eb" radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
                 </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="mb-8">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Clock className="h-5 w-5 mr-2" />
+                  Customers with Due Payments
+                </CardTitle>
+                <CardDescription>Overview of customers with pending payments</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <DueCustomersTable />
               </CardContent>
             </Card>
           </div>
