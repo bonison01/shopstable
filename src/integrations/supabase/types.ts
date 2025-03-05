@@ -173,6 +173,7 @@ export type Database = {
       products: {
         Row: {
           category: string
+          category_type: string | null
           created_at: string | null
           description: string | null
           id: string
@@ -180,12 +181,17 @@ export type Database = {
           last_updated: string | null
           name: string
           price: number
+          purchased_price: number | null
+          retail_price: number | null
           sku: string
           stock: number
           threshold: number
+          trainer_price: number | null
+          wholesale_price: number | null
         }
         Insert: {
           category: string
+          category_type?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
@@ -193,12 +199,17 @@ export type Database = {
           last_updated?: string | null
           name: string
           price: number
+          purchased_price?: number | null
+          retail_price?: number | null
           sku: string
           stock?: number
           threshold?: number
+          trainer_price?: number | null
+          wholesale_price?: number | null
         }
         Update: {
           category?: string
+          category_type?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
@@ -206,9 +217,13 @@ export type Database = {
           last_updated?: string | null
           name?: string
           price?: number
+          purchased_price?: number | null
+          retail_price?: number | null
           sku?: string
           stock?: number
           threshold?: number
+          trainer_price?: number | null
+          wholesale_price?: number | null
         }
         Relationships: []
       }
