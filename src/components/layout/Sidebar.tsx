@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useSidebar } from "@/hooks/use-sidebar";
 import {
@@ -17,12 +18,12 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { ModeToggle } from "@/components/layout/ModeToggle";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
@@ -189,23 +190,19 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: { isOp
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="end" forceMount>
-              <DropdownMenuHeader className="font-normal">
-                <div className="flex flex-col space-y-1.5 p-2">
-                  <p className="text-sm font-medium leading-none">{profile?.first_name} {profile?.last_name}</p>
-                  <p className="text-xs leading-none text-muted-foreground">
-                    {user?.email}
-                  </p>
-                </div>
-              </DropdownMenuHeader>
+              <div className="flex flex-col space-y-1.5 p-2">
+                <p className="text-sm font-medium leading-none">{profile?.first_name} {profile?.last_name}</p>
+                <p className="text-xs leading-none text-muted-foreground">
+                  {user?.email}
+                </p>
+              </div>
               <DropdownMenuSeparator />
               <DropdownMenuItem>
                 Settings
-                <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleSignOut}>
                 Log out
-                <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

@@ -7,6 +7,7 @@ export interface StaffMember {
   role: string;
   status: string;
   created_at?: string;
+  user_id?: string;
 }
 
 export interface EditableStaffData {

@@ -8,11 +8,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useAuth } from "@/contexts/AuthContext";
 
 const AddStaffForm = ({ onSuccess }: { onSuccess?: () => void }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
   
   const [staff, setStaff] = useState({
     staff_email: "",
@@ -60,6 +62,7 @@ const AddStaffForm = ({ onSuccess }: { onSuccess?: () => void }) => {
       }
 
       // Insert to Supabase
+      // Note: user_id is automatically set by the database trigger we created
       const { data, error } = await supabase
         .from('staff')
         .insert({
@@ -68,6 +71,7 @@ const AddStaffForm = ({ onSuccess }: { onSuccess?: () => void }) => {
           last_name: staff.last_name,
           role: staff.role,
           status: staff.status,
+          // The user_id is automatically set by a database trigger
         })
         .select();
 
