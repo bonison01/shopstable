@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,21 +12,15 @@ import { formatCurrency } from "@/utils/format";
 import { Calendar, Download, TrendingUp, Users, Package, ShoppingCart, Banknote } from "lucide-react";
 import { StatsCard } from "@/components/ui/StatsCard";
 import { useToast } from "@/hooks/use-toast";
+import { useSidebar } from "@/hooks/use-sidebar";
+import { cn } from "@/lib/utils";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
 
 const Sales = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [period, setPeriod] = useState("week");
   const { toast } = useToast();
-
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
-  
-  const closeSidebar = () => {
-    setSidebarOpen(false);
-  };
+  const { isOpen, toggle, close, collapsed, toggleCollapse } = useSidebar();
 
   const { data: salesData, isLoading: salesLoading } = useQuery({
     queryKey: ['sales-data', period],
@@ -97,10 +92,21 @@ const Sales = () => {
 
   return (
     <div className="flex min-h-screen bg-muted/40">
-      <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
+      <Sidebar 
+        isOpen={isOpen} 
+        onClose={close} 
+        collapsed={collapsed}
+        onToggleCollapse={toggleCollapse}
+      />
       
-      <div className="flex flex-1 flex-col">
-        <Navbar toggleSidebar={toggleSidebar} />
+      <div className={cn(
+        "flex flex-1 flex-col transition-all duration-300 ease-in-out",
+        collapsed ? "md:ml-16" : "md:ml-64"
+      )}>
+        <Navbar 
+          toggleSidebar={toggle} 
+          isSidebarCollapsed={collapsed}
+        />
         
         <main className="flex-1 p-4 md:p-6 lg:p-8">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">

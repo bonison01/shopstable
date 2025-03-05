@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,6 +28,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useSidebar } from "@/hooks/use-sidebar";
+import { cn } from "@/lib/utils";
 
 interface EditableOrderData {
   id: string;
@@ -35,12 +38,12 @@ interface EditableOrderData {
 }
 
 const Orders = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const { toast } = useToast();
   const [editingOrder, setEditingOrder] = useState<EditableOrderData | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
+  const { isOpen, toggle, close, collapsed, toggleCollapse } = useSidebar();
 
   const { data: orders, isLoading, error, refetch } = useQuery({
     queryKey: ['orders'],
@@ -69,14 +72,6 @@ const Orders = () => {
       return data || [];
     },
   });
-
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
-
-  const closeSidebar = () => {
-    setSidebarOpen(false);
-  };
 
   const handleAddOrder = () => {
     setAddDialogOpen(false);
@@ -154,10 +149,21 @@ const Orders = () => {
 
   return (
     <div className="flex min-h-screen bg-muted/40">
-      <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
+      <Sidebar 
+        isOpen={isOpen} 
+        onClose={close} 
+        collapsed={collapsed}
+        onToggleCollapse={toggleCollapse}
+      />
       
-      <div className="flex flex-1 flex-col">
-        <Navbar toggleSidebar={toggleSidebar} />
+      <div className={cn(
+        "flex flex-1 flex-col transition-all duration-300 ease-in-out",
+        collapsed ? "md:ml-16" : "md:ml-64"
+      )}>
+        <Navbar 
+          toggleSidebar={toggle}
+          isSidebarCollapsed={collapsed}
+        />
         
         <main className="flex-1 p-4 md:p-6 lg:p-8">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 fade-in">

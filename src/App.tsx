@@ -14,6 +14,7 @@ import Orders from "./pages/Orders";
 import Sales from "./pages/Sales";
 import CashFlow from "./pages/CashFlow";
 import NotFound from "./pages/NotFound";
+import "./App.css";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,9 @@ const App = () => (
               <Route path="/orders" element={<Orders />} />
               <Route path="/sales" element={<Sales />} />
               <Route path="/cash-flow" element={<CashFlow />} />
+              {/* Add routes for Settings and Support */}
+              <Route path="/settings" element={<Index />} />
+              <Route path="/support" element={<Index />} />
             </Route>
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

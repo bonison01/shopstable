@@ -19,8 +19,10 @@ export function useSidebar() {
 
   // Setup a global click handler to close the sidebar when clicking anywhere
   useEffect(() => {
-    const handleGlobalClick = () => {
-      if (isOpen) {
+    const handleGlobalClick = (e: MouseEvent) => {
+      // We need to check if the click is outside the sidebar
+      const sidebarElement = document.getElementById('main-sidebar');
+      if (isOpen && sidebarElement && !sidebarElement.contains(e.target as Node)) {
         close();
       }
     };
