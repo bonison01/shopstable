@@ -82,7 +82,6 @@ interface ExcelRow {
 const Inventory = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("all");
   const [stockFilter, setStockFilter] = useState("all");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -113,8 +112,8 @@ const Inventory = () => {
     },
   });
 
-  const categories = products ? 
-    ["all", ...Array.from(new Set(products.map(product => product.category)))] : 
+  const categoryTypes = products ? 
+    ["all", ...Array.from(new Set(products.filter(p => p.category_type).map(product => product.category_type)))] : 
     ["all"];
 
   const filteredProducts = products?.filter(product => {
@@ -123,15 +122,13 @@ const Inventory = () => {
       product.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (product.description && product.description.toLowerCase().includes(searchQuery.toLowerCase()));
     
-    const matchesCategory = categoryFilter === "all" || product.category === categoryFilter;
-    
     const matchesStock = 
       stockFilter === "all" || 
       (stockFilter === "in-stock" && product.stock > 0) ||
       (stockFilter === "low-stock" && product.stock <= product.threshold && product.stock > 0) ||
       (stockFilter === "out-of-stock" && product.stock === 0);
     
-    return matchesSearch && matchesCategory && matchesStock;
+    return matchesSearch && matchesStock;
   });
 
   const getStockStatus = (product: Product) => {
@@ -421,19 +418,6 @@ const Inventory = () => {
             </div>
             
             <div className="flex flex-col sm:flex-row gap-4">
-              <div className="w-full sm:w-48">
-                <select 
-                  className="w-full h-10 rounded-md border border-input bg-background px-3 py-2"
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                >
-                  <option value="all">All Categories</option>
-                  {categories.filter(cat => cat !== "all").map(category => (
-                    <option key={category} value={category}>{category}</option>
-                  ))}
-                </select>
-              </div>
-              
               <div className="w-full sm:w-48">
                 <select 
                   className="w-full h-10 rounded-md border border-input bg-background px-3 py-2"

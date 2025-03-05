@@ -58,6 +58,17 @@ const AddCustomerForm = ({ onSuccess }: { onSuccess?: () => void }) => {
         throw new Error("Please enter a valid email address");
       }
 
+      // Check if email already exists
+      const { data: existingCustomer } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('email', customer.email)
+        .maybeSingle();
+
+      if (existingCustomer) {
+        throw new Error("A customer with this email already exists");
+      }
+
       // Insert to Supabase
       const { data, error } = await supabase
         .from('customers')
