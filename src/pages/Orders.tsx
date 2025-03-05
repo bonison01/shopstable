@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatDate, getStatusColor } from "@/utils/format";
-import { FileText, Plus, Search, Save, Check, X, Edit, Loader2 } from "lucide-react";
+import { FileText, Plus, Search, Save, Check, X, Edit, Loader2, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Dialog, 
@@ -30,6 +29,7 @@ import {
 } from "@/components/ui/select";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { cn } from "@/lib/utils";
+import { OrderDetailsDialog } from "@/components/orders/OrderDetailsDialog";
 
 interface EditableOrderData {
   id: string;
@@ -44,6 +44,8 @@ const Orders = () => {
   const [editingOrder, setEditingOrder] = useState<EditableOrderData | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const { isOpen, toggle, close, collapsed, toggleCollapse } = useSidebar();
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
 
   const { data: orders, isLoading, error, refetch } = useQuery({
     queryKey: ['orders'],
@@ -97,6 +99,16 @@ const Orders = () => {
 
   const cancelEditing = () => {
     setEditingOrder(null);
+  };
+
+  const openOrderDetails = (orderId: string) => {
+    setSelectedOrderId(orderId);
+    setIsDetailsDialogOpen(true);
+  };
+
+  const handleDetailsDialogClose = () => {
+    setIsDetailsDialogOpen(false);
+    setSelectedOrderId(null);
   };
 
   const updateOrder = async () => {
@@ -228,6 +240,7 @@ const Orders = () => {
                 isUpdating={isUpdating}
                 handleStatusChange={handleStatusChange}
                 handlePaymentStatusChange={handlePaymentStatusChange}
+                openOrderDetails={openOrderDetails}
               />
             </TabsContent>
             
@@ -243,6 +256,7 @@ const Orders = () => {
                 isUpdating={isUpdating}
                 handleStatusChange={handleStatusChange}
                 handlePaymentStatusChange={handlePaymentStatusChange}
+                openOrderDetails={openOrderDetails}
               />
             </TabsContent>
             
@@ -258,6 +272,7 @@ const Orders = () => {
                 isUpdating={isUpdating}
                 handleStatusChange={handleStatusChange}
                 handlePaymentStatusChange={handlePaymentStatusChange}
+                openOrderDetails={openOrderDetails}
               />
             </TabsContent>
             
@@ -273,6 +288,7 @@ const Orders = () => {
                 isUpdating={isUpdating}
                 handleStatusChange={handleStatusChange}
                 handlePaymentStatusChange={handlePaymentStatusChange}
+                openOrderDetails={openOrderDetails}
               />
             </TabsContent>
             
@@ -288,6 +304,7 @@ const Orders = () => {
                 isUpdating={isUpdating}
                 handleStatusChange={handleStatusChange}
                 handlePaymentStatusChange={handlePaymentStatusChange}
+                openOrderDetails={openOrderDetails}
               />
             </TabsContent>
             
@@ -303,9 +320,16 @@ const Orders = () => {
                 isUpdating={isUpdating}
                 handleStatusChange={handleStatusChange}
                 handlePaymentStatusChange={handlePaymentStatusChange}
+                openOrderDetails={openOrderDetails}
               />
             </TabsContent>
           </Tabs>
+
+          <OrderDetailsDialog
+            orderId={selectedOrderId}
+            isOpen={isDetailsDialogOpen}
+            onClose={handleDetailsDialogClose}
+          />
         </main>
       </div>
     </div>
@@ -323,6 +347,7 @@ interface OrdersTableProps {
   isUpdating: boolean;
   handleStatusChange: (value: string) => void;
   handlePaymentStatusChange: (value: string) => void;
+  openOrderDetails: (orderId: string) => void;
 }
 
 const OrdersTable = ({ 
@@ -335,7 +360,8 @@ const OrdersTable = ({
   updateOrder,
   isUpdating,
   handleStatusChange,
-  handlePaymentStatusChange
+  handlePaymentStatusChange,
+  openOrderDetails
 }: OrdersTableProps) => {
   if (isLoading) {
     return (
@@ -460,13 +486,21 @@ const OrdersTable = ({
                   </div>
                 ) : (
                   <div className="flex space-x-2">
-                    <Button variant="ghost" size="sm" onClick={() => startEditing(order)}>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => openOrderDetails(order.id)}
+                    >
+                      <Eye className="h-4 w-4 mr-1" />
+                      View
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => startEditing(order)}
+                    >
                       <Edit className="h-4 w-4 mr-1" />
                       Edit
-                    </Button>
-                    <Button variant="ghost" size="sm">
-                      <FileText className="h-4 w-4 mr-1" />
-                      View
                     </Button>
                   </div>
                 )}
