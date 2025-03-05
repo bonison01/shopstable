@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,8 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { formatCurrency } from "@/utils/format";
 import { Label } from "@/components/ui/label";
+import { formatCurrency } from "@/utils/format";
 import { 
   Package, 
   Plus, 
@@ -37,7 +36,6 @@ import {
 import AddProductForm from "@/components/forms/AddProductForm";
 import * as XLSX from 'xlsx';
 
-// Define the Product interface to match our database schema
 interface Product {
   id: string;
   name: string;
@@ -57,7 +55,6 @@ interface Product {
   last_updated?: string | null;
 }
 
-// Define Excel import row structure
 interface ExcelRow {
   [key: string]: any;
   name?: string;
@@ -116,22 +113,18 @@ const Inventory = () => {
     },
   });
 
-  // Get unique categories for the filter
   const categories = products ? 
     ["all", ...Array.from(new Set(products.map(product => product.category)))] : 
     ["all"];
 
   const filteredProducts = products?.filter(product => {
-    // Apply search filter
     const matchesSearch = 
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (product.description && product.description.toLowerCase().includes(searchQuery.toLowerCase()));
     
-    // Apply category filter
     const matchesCategory = categoryFilter === "all" || product.category === categoryFilter;
     
-    // Apply stock filter
     const matchesStock = 
       stockFilter === "all" || 
       (stockFilter === "in-stock" && product.stock > 0) ||
@@ -141,7 +134,7 @@ const Inventory = () => {
     return matchesSearch && matchesCategory && matchesStock;
   });
 
-  const getStockStatus = (product: any) => {
+  const getStockStatus = (product: Product) => {
     if (product.stock === 0) {
       return { label: "Out of Stock", variant: "destructive", icon: XCircle };
     } else if (product.stock <= product.threshold) {
@@ -188,19 +181,12 @@ const Inventory = () => {
     }
   };
 
-  // Export inventory to Excel
   const handleExportToExcel = () => {
     try {
-      // Create worksheet with all product data
       const worksheet = XLSX.utils.json_to_sheet(products || []);
-      
-      // Create workbook and add the worksheet
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Inventory");
-      
-      // Generate Excel file and trigger download
       XLSX.writeFile(workbook, "inventory_export.xlsx");
-      
       toast({
         title: "Export Successful",
         description: "Inventory has been exported to Excel",
@@ -214,14 +200,12 @@ const Inventory = () => {
     }
   };
 
-  // Handle file selection for import
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setImportFile(e.target.files[0]);
     }
   };
 
-  // Import inventory from Excel
   const handleImportFromExcel = async () => {
     if (!importFile) {
       toast({
@@ -235,26 +219,21 @@ const Inventory = () => {
     setIsImporting(true);
 
     try {
-      // Read the Excel file
       const reader = new FileReader();
       
       reader.onload = async (e) => {
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: 'array' });
         
-        // Get the first worksheet
         const worksheet = workbook.Sheets[workbook.SheetNames[0]];
         
-        // Convert to JSON
         const jsonData = XLSX.utils.sheet_to_json(worksheet) as ExcelRow[];
         
-        // Process and validate each product
         let successes = 0;
         let failures = 0;
         
         for (const item of jsonData) {
           try {
-            // Map Excel columns to database fields
             const product = {
               name: item.name || item.Name || '',
               sku: item.sku || item.SKU || '',
@@ -271,12 +250,10 @@ const Inventory = () => {
               image_url: item.image_url || null
             };
             
-            // Validate required fields
             if (!product.name || !product.sku || !product.category) {
               throw new Error(`Missing required fields for product: ${product.name || 'Unknown'}`);
             }
             
-            // Check if product exists by SKU
             const { data: existingProduct } = await supabase
               .from('products')
               .select('id')
@@ -284,7 +261,6 @@ const Inventory = () => {
               .maybeSingle();
             
             if (existingProduct) {
-              // Update existing product
               const { error } = await supabase
                 .from('products')
                 .update(product)
@@ -292,7 +268,6 @@ const Inventory = () => {
               
               if (error) throw error;
             } else {
-              // Insert new product
               const { error } = await supabase
                 .from('products')
                 .insert(product);
@@ -307,14 +282,12 @@ const Inventory = () => {
           }
         }
         
-        // Show results
         if (successes > 0) {
           toast({
             title: "Import Results",
             description: `Successfully processed ${successes} products. ${failures > 0 ? `Failed to process ${failures} products.` : ''}`,
           });
           
-          // Refresh product list
           refetch();
         } else if (failures > 0) {
           toast({
@@ -330,7 +303,6 @@ const Inventory = () => {
           });
         }
         
-        // Close dialog and reset state
         setImportDialogOpen(false);
         setImportFile(null);
         setIsImporting(false);
@@ -496,7 +468,7 @@ const Inventory = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredProducts?.map(product => {
+              {filteredProducts?.map((product: Product) => {
                 const stockStatus = getStockStatus(product);
                 return (
                   <Card key={product.id} className="overflow-hidden">
@@ -568,7 +540,6 @@ const Inventory = () => {
             </div>
           )}
           
-          {/* Delete Confirmation Dialog */}
           <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
             <DialogContent>
               <DialogHeader>
@@ -589,7 +560,6 @@ const Inventory = () => {
             </DialogContent>
           </Dialog>
           
-          {/* Import Dialog */}
           <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
             <DialogContent>
               <DialogHeader>
