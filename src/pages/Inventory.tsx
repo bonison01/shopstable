@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -10,6 +10,7 @@ import AddProductForm from "@/components/forms/AddProductForm";
 import EditProductForm from "@/components/forms/EditProductForm";
 import * as XLSX from 'xlsx';
 import { Package } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 // Import refactored components
 import ProductCard from "@/components/inventory/ProductCard";
@@ -47,7 +48,25 @@ const Inventory = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [toolbarsVisible, setToolbarsVisible] = useState(true);
   const { toast } = useToast();
+  
+  // Handle global click to hide toolbars
+  useEffect(() => {
+    const handleBodyClick = () => {
+      if (toolbarsVisible) {
+        setToolbarsVisible(false);
+      } else {
+        setToolbarsVisible(true);
+      }
+    };
+    
+    document.body.addEventListener('click', handleBodyClick);
+    
+    return () => {
+      document.body.removeEventListener('click', handleBodyClick);
+    };
+  }, [toolbarsVisible]);
   
   const { data: products, isLoading, error, refetch } = useQuery({
     queryKey: ['products'],
@@ -124,25 +143,29 @@ const Inventory = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-muted/40">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+    <div className="flex min-h-screen bg-muted/40" onClick={() => setToolbarsVisible(!toolbarsVisible)}>
+      <Sidebar isOpen={sidebarOpen && toolbarsVisible} onClose={() => setSidebarOpen(false)} />
       
       <div className="flex flex-1 flex-col">
         <Navbar toggleSidebar={toggleSidebar} />
         
         <main className="flex-1 p-4 md:p-6 lg:p-8">
-          <InventoryHeader 
-            onAddProduct={() => setAddDialogOpen(true)}
-            onExportToExcel={handleExportToExcel}
-            onImportExcel={() => setImportDialogOpen(true)}
-          />
-          
-          <SearchAndFilters 
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            stockFilter={stockFilter}
-            setStockFilter={setStockFilter}
-          />
+          {toolbarsVisible && (
+            <>
+              <InventoryHeader 
+                onAddProduct={() => setAddDialogOpen(true)}
+                onExportToExcel={handleExportToExcel}
+                onImportExcel={() => setImportDialogOpen(true)}
+              />
+              
+              <SearchAndFilters 
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                stockFilter={stockFilter}
+                setStockFilter={setStockFilter}
+              />
+            </>
+          )}
           
           {isLoading ? (
             <div className="flex justify-center items-center h-64">
@@ -181,32 +204,40 @@ const Inventory = () => {
           />
           
           <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-            <DialogContent className="sm:max-w-[600px]">
+            <DialogContent className="sm:max-w-[700px] max-h-[90vh]">
               <DialogHeader>
                 <DialogTitle>Add New Product</DialogTitle>
                 <DialogDescription>
                   Fill in the details to add a new product to your inventory.
                 </DialogDescription>
               </DialogHeader>
-              <AddProductForm onSuccess={handleAddProduct} />
+              <ScrollArea className="h-[calc(90vh-150px)] pr-4">
+                <div className="pr-3">
+                  <AddProductForm onSuccess={handleAddProduct} />
+                </div>
+              </ScrollArea>
             </DialogContent>
           </Dialog>
           
           <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-            <DialogContent className="sm:max-w-[600px]">
+            <DialogContent className="sm:max-w-[700px] max-h-[90vh]">
               <DialogHeader>
                 <DialogTitle>Edit Product</DialogTitle>
                 <DialogDescription>
                   Update the details of your product.
                 </DialogDescription>
               </DialogHeader>
-              {selectedProduct && (
-                <EditProductForm 
-                  product={selectedProduct} 
-                  onSuccess={handleEditProduct} 
-                  onCancel={() => setEditDialogOpen(false)} 
-                />
-              )}
+              <ScrollArea className="h-[calc(90vh-150px)] pr-4">
+                <div className="pr-3">
+                  {selectedProduct && (
+                    <EditProductForm 
+                      product={selectedProduct} 
+                      onSuccess={handleEditProduct} 
+                      onCancel={() => setEditDialogOpen(false)} 
+                    />
+                  )}
+                </div>
+              </ScrollArea>
             </DialogContent>
           </Dialog>
           
