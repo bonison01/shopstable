@@ -14,6 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Save } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface CustomerDetailsDialogProps {
   customerId: string | null;
@@ -40,16 +41,18 @@ export function CustomerDetailsDialog({
   const [isEditing, setIsEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth(); // Get current authenticated user
 
   const { data: customerData, isLoading: isLoadingCustomer } = useQuery({
     queryKey: ["customer", customerId],
     queryFn: async () => {
-      if (!customerId) return null;
+      if (!customerId || !user) return null;
       
       const { data, error } = await supabase
         .from("customers")
         .select("*")
         .eq("id", customerId)
+        .eq("user_id", user.id) // Only fetch customer if it belongs to current user
         .single();
       
       if (error) {
@@ -63,18 +66,19 @@ export function CustomerDetailsDialog({
       
       return data as Customer;
     },
-    enabled: !!customerId && isOpen,
+    enabled: !!customerId && !!user && isOpen,
   });
 
   const { data: orders, isLoading: isLoadingOrders } = useQuery({
     queryKey: ["customer-orders", customerId],
     queryFn: async () => {
-      if (!customerId) return [];
+      if (!customerId || !user) return [];
       
       const { data, error } = await supabase
         .from("orders")
         .select("id, date, total, status, payment_status")
         .eq("customer_id", customerId)
+        .eq("user_id", user.id) // Only fetch orders that belong to current user
         .order("date", { ascending: false });
       
       if (error) {
@@ -88,7 +92,7 @@ export function CustomerDetailsDialog({
       
       return data as Order[];
     },
-    enabled: !!customerId && isOpen,
+    enabled: !!customerId && !!user && isOpen,
   });
 
   useEffect(() => {
@@ -103,7 +107,7 @@ export function CustomerDetailsDialog({
   };
 
   const handleSaveCustomer = async () => {
-    if (!customer) return;
+    if (!customer || !user) return;
     
     setIsSubmitting(true);
     
@@ -116,8 +120,10 @@ export function CustomerDetailsDialog({
           phone: customer.phone,
           address: customer.address,
           customer_type: customer.customer_type,
+          user_id: user.id, // Ensure user_id is preserved during update
         })
-        .eq("id", customer.id);
+        .eq("id", customer.id)
+        .eq("user_id", user.id); // Only update if the customer belongs to this user
       
       if (error) throw error;
       

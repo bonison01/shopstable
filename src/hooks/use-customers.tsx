@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Customer } from "@/pages/Customers";
+import { useAuth } from "@/contexts/AuthContext";
 
 export const useCustomers = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -12,6 +13,7 @@ export const useCustomers = () => {
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth(); // Get the current authenticated user
 
   // Fetch customers data
   const { data: customers, isLoading, refetch } = useQuery({
@@ -33,6 +35,7 @@ export const useCustomers = () => {
 
       return data as Customer[];
     },
+    enabled: !!user, // Only run query when user is authenticated
   });
 
   // Filter customers based on search query

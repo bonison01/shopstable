@@ -10,11 +10,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { formatPhoneNumber } from "@/utils/format";
+import { useAuth } from "@/contexts/AuthContext";
 
 const AddCustomerForm = ({ onSuccess }: { onSuccess?: () => void }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth(); // Get the current authenticated user
   
   const [customer, setCustomer] = useState({
     name: "",
@@ -46,6 +48,12 @@ const AddCustomerForm = ({ onSuccess }: { onSuccess?: () => void }) => {
     setIsSubmitting(true);
     setError(null);
 
+    if (!user) {
+      setError("You must be logged in to add a customer");
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
       // Simple validation
       if (!customer.name || !customer.email) {
@@ -63,6 +71,7 @@ const AddCustomerForm = ({ onSuccess }: { onSuccess?: () => void }) => {
         .from('customers')
         .select('id')
         .eq('email', customer.email)
+        .eq('user_id', user.id) // Check only among user's own customers
         .maybeSingle();
 
       if (existingCustomer) {
@@ -79,6 +88,7 @@ const AddCustomerForm = ({ onSuccess }: { onSuccess?: () => void }) => {
           address: customer.address || null,
           status: customer.status,
           customer_type: customer.customer_type,
+          user_id: user.id, // Set user_id to current authenticated user
         })
         .select();
 
