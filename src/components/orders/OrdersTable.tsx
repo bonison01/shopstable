@@ -5,11 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatCurrency, formatDate, getStatusColor } from "@/utils/format";
 import { Edit, Eye, Loader2, Save, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 interface EditableOrderData {
   id: string;
   status: string;
   payment_status: string;
+  payment_amount?: number;
+  total?: number;
 }
 
 interface OrdersTableProps {
@@ -23,6 +26,7 @@ interface OrdersTableProps {
   isUpdating: boolean;
   handleStatusChange: (value: string) => void;
   handlePaymentStatusChange: (value: string) => void;
+  handlePaymentAmountChange?: (value: string) => void;
   openOrderDetails: (orderId: string) => void;
 }
 
@@ -37,6 +41,7 @@ export const OrdersTable = ({
   isUpdating,
   handleStatusChange,
   handlePaymentStatusChange,
+  handlePaymentAmountChange,
   openOrderDetails
 }: OrdersTableProps) => {
   if (isLoading) {
@@ -111,28 +116,55 @@ export const OrdersTable = ({
               <td className="py-3 px-4">{order.order_items?.length || 0}</td>
               <td className="py-3 px-4">
                 {editingOrder && editingOrder.id === order.id ? (
-                  <Select 
-                    value={editingOrder.payment_status} 
-                    onValueChange={handlePaymentStatusChange}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select payment status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="paid">Paid</SelectItem>
-                      <SelectItem value="refunded">Refunded</SelectItem>
-                      <SelectItem value="failed">Failed</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="space-y-2">
+                    <Select 
+                      value={editingOrder.payment_status} 
+                      onValueChange={handlePaymentStatusChange}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select payment status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="paid">Paid</SelectItem>
+                        <SelectItem value="partial">Partial Payment</SelectItem>
+                        <SelectItem value="refunded">Refunded</SelectItem>
+                        <SelectItem value="failed">Failed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    
+                    {editingOrder.payment_status === 'partial' && handlePaymentAmountChange && (
+                      <div className="mt-2">
+                        <Input
+                          type="number"
+                          placeholder="Payment amount"
+                          value={editingOrder.payment_amount || ""}
+                          onChange={(e) => handlePaymentAmountChange(e.target.value)}
+                          className="w-full"
+                          min={0}
+                          max={editingOrder.total || order.total}
+                          step={0.01}
+                        />
+                      </div>
+                    )}
+                  </div>
                 ) : (
-                  <Badge 
-                    variant={order.payment_status === 'paid' ? 'default' : 
-                            order.payment_status === 'pending' ? 'secondary' : 
-                            'destructive'}
-                  >
-                    {order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1)}
-                  </Badge>
+                  <div>
+                    <Badge 
+                      variant={order.payment_status === 'paid' ? 'default' : 
+                              order.payment_status === 'partial' ? 'outline' :
+                              order.payment_status === 'pending' ? 'secondary' : 
+                              'destructive'}
+                    >
+                      {order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1)}
+                    </Badge>
+                    
+                    {order.payment_status === 'partial' && order.payment_amount && (
+                      <div className="text-xs mt-1">
+                        Paid: {formatCurrency(order.payment_amount)} / {formatCurrency(order.total)}
+                      </div>
+                    )}
+                  </div>
                 )}
               </td>
               <td className="py-3 px-4 text-right font-medium">{formatCurrency(order.total)}</td>

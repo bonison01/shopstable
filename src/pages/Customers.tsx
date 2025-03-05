@@ -66,7 +66,7 @@ const Customers = () => {
         />
         
         <main className="flex-1 p-4 md:p-6">
-          <CustomersHeader />
+          <CustomersHeader onAddCustomer={refetch} />
 
           <Card>
             <CardHeader className="pb-3">

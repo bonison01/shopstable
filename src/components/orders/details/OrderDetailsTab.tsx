@@ -18,6 +18,7 @@ export function OrderDetailsTab({ order }: OrderDetailsTabProps) {
 
   const renderPaymentStatusBadge = (status: string) => {
     const variant = status === "paid" ? "default" : 
+                   status === "partial" ? "outline" :
                    status === "pending" ? "secondary" : 
                    "destructive";
     return <Badge variant={variant}>
@@ -46,6 +47,12 @@ export function OrderDetailsTab({ order }: OrderDetailsTabProps) {
               value={renderPaymentStatusBadge(order.payment_status)} 
               isComponent
             />
+            {order.payment_status === "partial" && order.payment_amount && (
+              <DetailRow 
+                label="Amount Paid" 
+                value={formatCurrency(order.payment_amount)} 
+              />
+            )}
             <DetailRow label="Total Items" value={order.order_items?.length || 0} />
             <DetailRow 
               label="Total Amount" 

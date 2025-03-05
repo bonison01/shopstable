@@ -24,6 +24,7 @@ const Orders = () => {
     isUpdating,
     handleStatusChange,
     handlePaymentStatusChange,
+    handlePaymentAmountChange,
     getOrdersByStatus,
     selectedOrderId,
     isDetailsDialogOpen,
@@ -72,6 +73,7 @@ const Orders = () => {
             isUpdating={isUpdating}
             handleStatusChange={handleStatusChange}
             handlePaymentStatusChange={handlePaymentStatusChange}
+            handlePaymentAmountChange={handlePaymentAmountChange}
             openOrderDetails={openOrderDetails}
           />
 

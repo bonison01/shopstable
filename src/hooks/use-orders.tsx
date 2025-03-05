@@ -8,6 +8,8 @@ export interface EditableOrderData {
   id: string;
   status: string;
   payment_status: string;
+  payment_amount?: number;
+  total?: number;
 }
 
 export const useOrders = () => {
@@ -65,7 +67,9 @@ export const useOrders = () => {
     setEditingOrder({
       id: order.id,
       status: order.status,
-      payment_status: order.payment_status
+      payment_status: order.payment_status,
+      payment_amount: order.payment_amount || 0,
+      total: order.total
     });
   };
 
@@ -91,7 +95,25 @@ export const useOrders = () => {
 
   const handlePaymentStatusChange = (value: string) => {
     if (editingOrder) {
-      setEditingOrder({ ...editingOrder, payment_status: value });
+      setEditingOrder({ 
+        ...editingOrder, 
+        payment_status: value,
+        // Reset payment amount if payment status is not partial
+        payment_amount: value === 'partial' ? editingOrder.payment_amount : undefined
+      });
+    }
+  };
+
+  const handlePaymentAmountChange = (value: string) => {
+    if (editingOrder) {
+      // Ensure the payment amount doesn't exceed the total
+      const numValue = parseFloat(value) || 0;
+      const validValue = Math.min(numValue, editingOrder.total || 0);
+      
+      setEditingOrder({ 
+        ...editingOrder, 
+        payment_amount: validValue 
+      });
     }
   };
 
@@ -101,12 +123,23 @@ export const useOrders = () => {
     setIsUpdating(true);
     
     try {
+      // Prepare update data based on payment status
+      const updateData: any = {
+        status: editingOrder.status,
+        payment_status: editingOrder.payment_status
+      };
+      
+      // Include payment_amount only for partial payments
+      if (editingOrder.payment_status === 'partial' && editingOrder.payment_amount !== undefined) {
+        updateData.payment_amount = editingOrder.payment_amount;
+      } else {
+        // Set payment_amount to null for other payment statuses
+        updateData.payment_amount = null;
+      }
+      
       const { error } = await supabase
         .from('orders')
-        .update({
-          status: editingOrder.status,
-          payment_status: editingOrder.payment_status
-        })
+        .update(updateData)
         .eq('id', editingOrder.id);
         
       if (error) {
@@ -147,6 +180,7 @@ export const useOrders = () => {
     isUpdating,
     handleStatusChange,
     handlePaymentStatusChange,
+    handlePaymentAmountChange,
     getOrdersByStatus,
     selectedOrderId,
     isDetailsDialogOpen,
