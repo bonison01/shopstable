@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef } from "react";
+import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -8,8 +8,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { useToast } from "@/hooks/use-toast";
 import AddProductForm from "@/components/forms/AddProductForm";
 import EditProductForm from "@/components/forms/EditProductForm";
-import * as XLSX from 'xlsx';
-import { Package } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 // Import refactored components
@@ -19,6 +17,11 @@ import ImportDialog from "@/components/inventory/ImportDialog";
 import DeleteConfirmDialog from "@/components/inventory/DeleteConfirmDialog";
 import InventoryHeader from "@/components/inventory/InventoryHeader";
 import EmptyInventory from "@/components/inventory/EmptyInventory";
+
+// Import custom hooks
+import { useSidebar } from "@/hooks/use-sidebar";
+import { useProductOperations } from "@/hooks/use-product-operations";
+import { useProductFilters } from "@/hooks/use-product-filters";
 
 interface Product {
   id: string;
@@ -40,25 +43,19 @@ interface Product {
 }
 
 const Inventory = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [stockFilter, setStockFilter] = useState("all");
+  // UI state
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const { toast } = useToast();
   const mainContentRef = useRef<HTMLDivElement>(null);
   
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
+  // Custom hooks
+  const { isOpen: sidebarOpen, toggle: toggleSidebar, close: closeSidebar, setupOutsideClickHandler } = useSidebar();
+  setupOutsideClickHandler(mainContentRef);
   
-  const closeSidebar = () => {
-    setSidebarOpen(false);
-  };
-  
+  // Fetch products data
   const { data: products, isLoading, error, refetch } = useQuery({
     queryKey: ['products'],
     queryFn: async () => {
@@ -80,74 +77,27 @@ const Inventory = () => {
     },
   });
 
-  // Close sidebar when clicking outside on mobile
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (sidebarOpen && mainContentRef.current && 
-          mainContentRef.current.contains(event.target as Node)) {
-        closeSidebar();
-      }
-    };
+  // Product operations
+  const { 
+    selectedProduct, 
+    setSelectedProduct, 
+    handleAddProduct, 
+    handleEditProduct, 
+    handleDeleteSuccess,
+    handleImportSuccess,
+    handleExportToExcel 
+  } = useProductOperations(refetch);
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [sidebarOpen]);
+  // Product filtering
+  const { 
+    searchQuery, 
+    setSearchQuery, 
+    stockFilter, 
+    setStockFilter, 
+    filterProducts 
+  } = useProductFilters();
 
-  const filteredProducts = products?.filter(product => {
-    const matchesSearch = 
-      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (product.description && product.description.toLowerCase().includes(searchQuery.toLowerCase()));
-    
-    const matchesStock = 
-      stockFilter === "all" || 
-      (stockFilter === "in-stock" && product.stock > 0) ||
-      (stockFilter === "low-stock" && product.stock <= product.threshold && product.stock > 0) ||
-      (stockFilter === "out-of-stock" && product.stock === 0);
-    
-    return matchesSearch && matchesStock;
-  });
-
-  const handleAddProduct = () => {
-    setAddDialogOpen(false);
-    refetch();
-  };
-
-  const handleEditProduct = () => {
-    setEditDialogOpen(false);
-    refetch();
-  };
-
-  const handleExportToExcel = () => {
-    try {
-      const worksheet = XLSX.utils.json_to_sheet(products || []);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Inventory");
-      XLSX.writeFile(workbook, "inventory_export.xlsx");
-      toast({
-        title: "Export Successful",
-        description: "Inventory has been exported to Excel",
-      });
-    } catch (err: any) {
-      toast({
-        variant: "destructive",
-        title: "Export Failed",
-        description: err.message || "Failed to export inventory",
-      });
-    }
-  };
-
-  const handleDeleteSuccess = () => {
-    setSelectedProduct(null);
-    refetch();
-  };
-
-  const handleImportSuccess = () => {
-    // Make sure to refresh the data after successful import
-    refetch();
-  };
+  const filteredProducts = filterProducts(products);
 
   return (
     <div className="flex min-h-screen bg-muted/40">
@@ -159,7 +109,7 @@ const Inventory = () => {
         <main className="flex-1 p-4 md:p-6 lg:p-8">
           <InventoryHeader 
             onAddProduct={() => setAddDialogOpen(true)}
-            onExportToExcel={handleExportToExcel}
+            onExportToExcel={() => handleExportToExcel(products || [])}
             onImportExcel={() => setImportDialogOpen(true)}
           />
           

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -90,7 +89,7 @@ const ImportDialog = ({ open, onOpenChange, onSuccess }: ImportDialogProps) => {
     });
   };
 
-  const handleImportFromExcel = async () => {
+  const handleImport = async () => {
     if (!importFile) {
       toast({
         variant: "destructive",
@@ -168,7 +167,7 @@ const ImportDialog = ({ open, onOpenChange, onSuccess }: ImportDialogProps) => {
         
         if (successes > 0) {
           toast({
-            title: "Import Results",
+            title: "Import Successful",
             description: `Successfully processed ${successes} products. ${failures > 0 ? `Failed to process ${failures} products.` : ''}`,
           });
           
@@ -289,7 +288,7 @@ const ImportDialog = ({ open, onOpenChange, onSuccess }: ImportDialogProps) => {
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleImportFromExcel} disabled={!importFile || isImporting}>
+          <Button onClick={handleImport} disabled={!importFile || isImporting}>
             {isImporting ? "Importing..." : "Import"}
           </Button>
         </DialogFooter>
