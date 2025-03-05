@@ -143,7 +143,7 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
     <>
       {/* Mobile Sidebar (Sheet) */}
       <Sheet open={isOpen} onOpenChange={onClose}>
-        <SheetContent side="left" className="p-0" closeButton={false}>
+        <SheetContent side="left" className="p-0">
           {sidebarContent}
         </SheetContent>
       </Sheet>
