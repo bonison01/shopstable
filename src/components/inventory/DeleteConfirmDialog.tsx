@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/auth/useAuth";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -31,15 +32,17 @@ const DeleteConfirmDialog = ({
   onSuccess 
 }: DeleteConfirmDialogProps) => {
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleDeleteProduct = async () => {
-    if (!product) return;
+    if (!product || !user) return;
     
     try {
       const { error } = await supabase
         .from('products')
         .delete()
-        .eq('id', product.id);
+        .eq('id', product.id)
+        .eq('user_id', user.id); // Only delete products belonging to logged-in user
       
       if (error) throw error;
       

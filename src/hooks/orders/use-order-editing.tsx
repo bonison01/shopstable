@@ -3,11 +3,13 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { EditableOrderData } from "./types";
+import { useAuth } from "@/contexts/auth/useAuth";
 
 export const useOrderEditing = (refetch: () => void) => {
   const [editingOrder, setEditingOrder] = useState<EditableOrderData | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const startEditing = (order: any) => {
     setEditingOrder({
@@ -54,7 +56,7 @@ export const useOrderEditing = (refetch: () => void) => {
   };
 
   const updateOrder = async () => {
-    if (!editingOrder) return;
+    if (!editingOrder || !user) return;
     
     setIsUpdating(true);
     
@@ -87,7 +89,8 @@ export const useOrderEditing = (refetch: () => void) => {
       const { error } = await supabase
         .from('orders')
         .update(updateData)
-        .eq('id', editingOrder.id);
+        .eq('id', editingOrder.id)
+        .eq('user_id', user.id); // Ensure we can only update orders belonging to this user
         
       if (error) {
         throw error;

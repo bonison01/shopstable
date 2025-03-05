@@ -12,13 +12,17 @@ import {
 import { formatCurrency, formatDate, calculateDaysLeft } from "@/utils/format";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/auth/useAuth";
 
 export const DueCustomersTable = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   
   const { data: dueOrders, isLoading } = useQuery({
-    queryKey: ['due-orders'],
+    queryKey: ['due-orders', user?.id],
     queryFn: async () => {
+      if (!user) return [];
+      
       const { data: orders, error } = await supabase
         .from('orders')
         .select(`
@@ -34,6 +38,7 @@ export const DueCustomersTable = () => {
             phone
           )
         `)
+        .eq('user_id', user.id)
         .or('payment_status.eq.pending,payment_status.eq.partial')
         .order('payment_due_date', { ascending: true });
       
@@ -70,6 +75,7 @@ export const DueCustomersTable = () => {
         };
       });
     },
+    enabled: !!user,
   });
 
   const getTotalDueAmount = () => {
