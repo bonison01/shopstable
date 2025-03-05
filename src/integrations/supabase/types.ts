@@ -18,6 +18,7 @@ export type Database = {
           id: string
           notes: string | null
           type: string
+          user_id: string | null
         }
         Insert: {
           amount: number
@@ -27,6 +28,7 @@ export type Database = {
           id?: string
           notes?: string | null
           type: string
+          user_id?: string | null
         }
         Update: {
           amount?: number
@@ -36,6 +38,7 @@ export type Database = {
           id?: string
           notes?: string | null
           type?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -53,6 +56,7 @@ export type Database = {
           status: string | null
           total_orders: number | null
           total_spent: number | null
+          user_id: string | null
         }
         Insert: {
           address?: string | null
@@ -67,6 +71,7 @@ export type Database = {
           status?: string | null
           total_orders?: number | null
           total_spent?: number | null
+          user_id?: string | null
         }
         Update: {
           address?: string | null
@@ -81,6 +86,7 @@ export type Database = {
           status?: string | null
           total_orders?: number | null
           total_spent?: number | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -143,6 +149,7 @@ export type Database = {
           payment_status: string | null
           status: string | null
           total: number
+          user_id: string | null
         }
         Insert: {
           created_at?: string | null
@@ -154,6 +161,7 @@ export type Database = {
           payment_status?: string | null
           status?: string | null
           total: number
+          user_id?: string | null
         }
         Update: {
           created_at?: string | null
@@ -165,6 +173,7 @@ export type Database = {
           payment_status?: string | null
           status?: string | null
           total?: number
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -193,6 +202,7 @@ export type Database = {
           stock: number
           threshold: number
           trainer_price: number | null
+          user_id: string | null
           wholesale_price: number | null
         }
         Insert: {
@@ -211,6 +221,7 @@ export type Database = {
           stock?: number
           threshold?: number
           trainer_price?: number | null
+          user_id?: string | null
           wholesale_price?: number | null
         }
         Update: {
@@ -229,37 +240,77 @@ export type Database = {
           stock?: number
           threshold?: number
           trainer_price?: number | null
+          user_id?: string | null
           wholesale_price?: number | null
         }
         Relationships: []
       }
       profiles: {
         Row: {
+          business_name: string | null
           created_at: string | null
           email: string
           first_name: string | null
           id: string
           last_name: string | null
+          owner_id: string | null
           phone: string | null
           role: string
         }
         Insert: {
+          business_name?: string | null
           created_at?: string | null
           email: string
           first_name?: string | null
           id: string
           last_name?: string | null
+          owner_id?: string | null
           phone?: string | null
           role?: string
         }
         Update: {
+          business_name?: string | null
           created_at?: string | null
           email?: string
           first_name?: string | null
           id?: string
           last_name?: string | null
+          owner_id?: string | null
           phone?: string | null
           role?: string
+        }
+        Relationships: []
+      }
+      staff: {
+        Row: {
+          created_at: string | null
+          first_name: string
+          id: string
+          last_name: string
+          role: string
+          staff_email: string
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          first_name: string
+          id?: string
+          last_name: string
+          role?: string
+          staff_email: string
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          first_name?: string
+          id?: string
+          last_name?: string
+          role?: string
+          staff_email?: string
+          status?: string | null
+          user_id?: string
         }
         Relationships: []
       }
