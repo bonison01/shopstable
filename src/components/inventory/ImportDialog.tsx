@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Info, Upload } from "lucide-react";
+import { Info, Upload, Download } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Dialog,
@@ -55,6 +55,39 @@ const ImportDialog = ({ open, onOpenChange, onSuccess }: ImportDialogProps) => {
     if (e.target.files && e.target.files.length > 0) {
       setImportFile(e.target.files[0]);
     }
+  };
+
+  const handleDownloadSample = () => {
+    // Create a sample template with headers
+    const worksheet = XLSX.utils.aoa_to_sheet([
+      [
+        'name', 'sku', 'category_type', 'price', 'wholesale_price', 
+        'retail_price', 'trainer_price', 'purchased_price', 'stock', 
+        'threshold', 'description', 'image_url'
+      ],
+      [
+        'Sample Product', 'PROD001', 'Accessories', 1000, 800,
+        1200, 900, 700, 50, 10, 'This is a sample product description', 
+        'https://example.com/image.jpg'
+      ],
+      [
+        'Another Product', 'PROD002', 'Electronics', 2000, 1500,
+        2500, 1800, 1200, 25, 5, 'Another product description', 
+        ''
+      ]
+    ]);
+    
+    // Create workbook and add the worksheet
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Products');
+    
+    // Generate the file and trigger download
+    XLSX.writeFile(workbook, 'inventory_import_template.xlsx');
+    
+    toast({
+      title: "Sample Template Downloaded",
+      description: "You can use this as a reference for formatting your import file.",
+    });
   };
 
   const handleImportFromExcel = async () => {
@@ -186,14 +219,24 @@ const ImportDialog = ({ open, onOpenChange, onSuccess }: ImportDialogProps) => {
         
         <ScrollArea className="h-[calc(90vh-200px)] pr-4">
           <div className="space-y-4 py-4 pr-2">
-            <div className="space-y-2">
-              <Label htmlFor="excel-file">Excel File</Label>
-              <Input 
-                id="excel-file" 
-                type="file" 
-                accept=".xlsx,.xls"
-                onChange={handleFileChange}
-              />
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+              <div className="flex-1 w-full">
+                <Label htmlFor="excel-file">Excel File</Label>
+                <Input 
+                  id="excel-file" 
+                  type="file" 
+                  accept=".xlsx,.xls"
+                  onChange={handleFileChange}
+                />
+              </div>
+              <Button 
+                variant="outline" 
+                onClick={handleDownloadSample}
+                className="mt-6 whitespace-nowrap"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Download Sample
+              </Button>
             </div>
             
             <div className="text-sm space-y-2">
