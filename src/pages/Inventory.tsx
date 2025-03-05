@@ -4,44 +4,19 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Navbar } from "@/components/layout/Navbar";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import AddProductForm from "@/components/forms/AddProductForm";
-import EditProductForm from "@/components/forms/EditProductForm";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
 // Import refactored components
-import ProductCard from "@/components/inventory/ProductCard";
 import SearchAndFilters from "@/components/inventory/SearchAndFilters";
-import ImportDialog from "@/components/inventory/ImportDialog";
-import DeleteConfirmDialog from "@/components/inventory/DeleteConfirmDialog";
 import InventoryHeader from "@/components/inventory/InventoryHeader";
-import EmptyInventory from "@/components/inventory/EmptyInventory";
+import ProductListing from "@/components/inventory/ProductListing";
+import InventoryDialogs from "@/components/inventory/InventoryDialogs";
 
 // Import custom hooks
 import { useSidebar } from "@/hooks/use-sidebar";
 import { useProductOperations } from "@/hooks/use-product-operations";
 import { useProductFilters } from "@/hooks/use-product-filters";
-
-interface Product {
-  id: string;
-  name: string;
-  sku: string;
-  category: string;
-  category_type?: string | null;
-  description?: string | null;
-  price: number;
-  wholesale_price?: number | null;
-  retail_price?: number | null;
-  trainer_price?: number | null;
-  purchased_price?: number | null;
-  stock: number;
-  threshold: number;
-  image_url?: string | null;
-  created_at?: string | null;
-  last_updated?: string | null;
-}
 
 const Inventory = () => {
   // UI state
@@ -102,6 +77,16 @@ const Inventory = () => {
 
   const filteredProducts = filterProducts(products);
 
+  const handleEditProductSelection = (product) => {
+    setSelectedProduct(product);
+    setEditDialogOpen(true);
+  };
+
+  const handleDeleteProductSelection = (product) => {
+    setSelectedProduct(product);
+    setDeleteDialogOpen(true);
+  };
+
   return (
     <div className="flex min-h-screen bg-muted/40">
       <Sidebar 
@@ -134,84 +119,29 @@ const Inventory = () => {
             setStockFilter={setStockFilter}
           />
           
-          {isLoading ? (
-            <div className="flex justify-center items-center h-64">
-              <div className="animate-pulse">Loading inventory...</div>
-            </div>
-          ) : error ? (
-            <div className="text-center text-red-500">
-              Error loading inventory. Please try again.
-            </div>
-          ) : filteredProducts?.length === 0 ? (
-            <EmptyInventory onAddProduct={() => setAddDialogOpen(true)} />
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredProducts?.map((product: Product) => (
-                <ProductCard 
-                  key={product.id}
-                  product={product}
-                  onEdit={(product) => {
-                    setSelectedProduct(product);
-                    setEditDialogOpen(true);
-                  }}
-                  onDelete={(product) => {
-                    setSelectedProduct(product);
-                    setDeleteDialogOpen(true);
-                  }}
-                />
-              ))}
-            </div>
-          )}
-          
-          <DeleteConfirmDialog 
-            open={deleteDialogOpen}
-            onOpenChange={setDeleteDialogOpen}
-            product={selectedProduct}
-            onSuccess={handleDeleteSuccess}
+          <ProductListing 
+            isLoading={isLoading}
+            error={error}
+            filteredProducts={filteredProducts}
+            onAddProduct={() => setAddDialogOpen(true)}
+            onEditProduct={handleEditProductSelection}
+            onDeleteProduct={handleDeleteProductSelection}
           />
           
-          <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-            <DialogContent className="sm:max-w-[700px] max-h-[90vh]">
-              <DialogHeader>
-                <DialogTitle>Add New Product</DialogTitle>
-                <DialogDescription>
-                  Fill in the details to add a new product to your inventory.
-                </DialogDescription>
-              </DialogHeader>
-              <ScrollArea className="h-[calc(90vh-150px)] pr-4">
-                <div className="pr-3">
-                  <AddProductForm onSuccess={handleAddProduct} />
-                </div>
-              </ScrollArea>
-            </DialogContent>
-          </Dialog>
-          
-          <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-            <DialogContent className="sm:max-w-[700px] max-h-[90vh]">
-              <DialogHeader>
-                <DialogTitle>Edit Product</DialogTitle>
-                <DialogDescription>
-                  Update the details of your product.
-                </DialogDescription>
-              </DialogHeader>
-              <ScrollArea className="h-[calc(90vh-150px)] pr-4">
-                <div className="pr-3">
-                  {selectedProduct && (
-                    <EditProductForm 
-                      product={selectedProduct} 
-                      onSuccess={handleEditProduct} 
-                      onCancel={() => setEditDialogOpen(false)} 
-                    />
-                  )}
-                </div>
-              </ScrollArea>
-            </DialogContent>
-          </Dialog>
-          
-          <ImportDialog 
-            open={importDialogOpen}
-            onOpenChange={setImportDialogOpen}
-            onSuccess={handleImportSuccess}
+          <InventoryDialogs 
+            addDialogOpen={addDialogOpen}
+            setAddDialogOpen={setAddDialogOpen}
+            editDialogOpen={editDialogOpen}
+            setEditDialogOpen={setEditDialogOpen}
+            deleteDialogOpen={deleteDialogOpen}
+            setDeleteDialogOpen={setDeleteDialogOpen}
+            importDialogOpen={importDialogOpen}
+            setImportDialogOpen={setImportDialogOpen}
+            selectedProduct={selectedProduct}
+            handleAddProduct={handleAddProduct}
+            handleEditProduct={handleEditProduct}
+            handleDeleteSuccess={handleDeleteSuccess}
+            handleImportSuccess={handleImportSuccess}
           />
         </main>
       </div>
