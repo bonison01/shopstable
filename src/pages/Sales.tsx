@@ -31,6 +31,12 @@ const Sales = () => {
     trend
   } = useSalesData();
 
+  // Calculate trend values for orders, AOV, and conversion rates
+  // For now we'll use derived values, but these could come from the useSalesData hook
+  const ordersTrend = trend * 0.8; // Example: Orders trend is 80% of the overall trend
+  const aovTrend = trend * 0.6;    // Example: AOV trend is 60% of the overall trend
+  const conversionTrend = trend * 0.4; // Example: Conversion trend is 40% of the overall trend
+
   return (
     <div className="flex min-h-screen bg-muted/40">
       <Sidebar 
@@ -73,6 +79,10 @@ const Sales = () => {
             averageOrderValue={salesSummary?.averageOrderValue || 0}
             conversionRate={salesSummary?.conversionRate || 0}
             trend={trend}
+            ordersTrend={ordersTrend}
+            aovTrend={aovTrend}
+            conversionTrend={conversionTrend}
+            isLoading={summaryLoading}
           />
           
           <SalesTrend 
