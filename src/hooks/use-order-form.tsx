@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/auth/useAuth";
 
 export interface Customer {
   id: string;
@@ -46,6 +47,7 @@ export const useOrderForm = (onSuccess?: () => void) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth(); // Get current authenticated user
   
   const [order, setOrder] = useState<OrderFormState>({
     customer_id: "",
@@ -60,11 +62,14 @@ export const useOrderForm = (onSuccess?: () => void) => {
   });
 
   const { data: customers, isLoading: customersLoading } = useQuery({
-    queryKey: ['customers'],
+    queryKey: ['customers', user?.id],
     queryFn: async () => {
+      if (!user) return [];
+      
       const { data, error } = await supabase
         .from('customers')
         .select('id, name, email, customer_type')
+        .eq('user_id', user.id) // Only fetch customers that belong to this user
         .order('name');
       
       if (error) {
@@ -78,14 +83,18 @@ export const useOrderForm = (onSuccess?: () => void) => {
       
       return data as Customer[] || [];
     },
+    enabled: !!user, // Only run query when user is authenticated
   });
 
   const { data: products, isLoading: productsLoading } = useQuery({
-    queryKey: ['products'],
+    queryKey: ['products', user?.id],
     queryFn: async () => {
+      if (!user) return [];
+      
       const { data, error } = await supabase
         .from('products')
         .select('id, name, price, stock, wholesale_price, retail_price, trainer_price')
+        .eq('user_id', user.id) // Only fetch products that belong to this user
         .order('name');
       
       if (error) {
@@ -99,6 +108,7 @@ export const useOrderForm = (onSuccess?: () => void) => {
       
       return data as Product[] || [];
     },
+    enabled: !!user, // Only run query when user is authenticated
   });
 
   const handleChange = (name: string, value: string) => {
@@ -130,6 +140,7 @@ export const useOrderForm = (onSuccess?: () => void) => {
     handleItemChange,
     calculateTotal,
     toast,
-    onSuccess
+    onSuccess,
+    user // Return the user so it can be accessed in components
   };
 };

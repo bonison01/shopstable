@@ -6,6 +6,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { Navbar } from "@/components/layout/Navbar";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/auth/useAuth";
 
 // Import refactored components
 import SearchAndFilters from "@/components/inventory/SearchAndFilters";
@@ -26,18 +27,22 @@ const Inventory = () => {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const { toast } = useToast();
   const mainContentRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth(); // Get the current authenticated user
   
   // Custom hooks
   const { isOpen: sidebarOpen, toggle: toggleSidebar, close: closeSidebar, setupOutsideClickHandler, collapsed: sidebarCollapsed, toggleCollapse } = useSidebar();
   
   // Fetch products data
   const { data: products, isLoading, error, refetch } = useQuery({
-    queryKey: ['products'],
+    queryKey: ['products', user?.id],
     queryFn: async () => {
+      if (!user) return [];
+      
       console.log("Fetching products from database...");
       const { data, error } = await supabase
         .from('products')
         .select('*')
+        .eq('user_id', user.id) // Only fetch products that belong to this user
         .order('name');
       
       if (error) {
@@ -53,6 +58,7 @@ const Inventory = () => {
       console.log("Products fetched successfully:", data?.length);
       return data || [];
     },
+    enabled: !!user, // Only run query when user is authenticated
   });
 
   // Product operations

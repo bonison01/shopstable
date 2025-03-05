@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/auth/useAuth";
 import * as XLSX from 'xlsx';
 
 interface Product {
@@ -26,6 +27,7 @@ interface Product {
 export function useProductOperations(refetchProducts: () => void) {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth(); // Get current authenticated user
 
   const handleAddProduct = () => {
     console.log("Product added - refetching products");
@@ -37,7 +39,16 @@ export function useProductOperations(refetchProducts: () => void) {
     refetchProducts();
   };
 
-  const handleDeleteSuccess = () => {
+  const handleDeleteSuccess = async (productId?: string) => {
+    if (productId && user) {
+      // Add user_id filtering when deleting products
+      await supabase
+        .from("products")
+        .delete()
+        .eq("id", productId)
+        .eq("user_id", user.id); // Only delete products owned by this user
+    }
+    
     console.log("Product deleted - refetching products");
     setSelectedProduct(null);
     refetchProducts();
@@ -88,4 +99,4 @@ export function useProductOperations(refetchProducts: () => void) {
     handleImportSuccess,
     handleExportToExcel
   };
-}
+};

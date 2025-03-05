@@ -2,6 +2,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/auth/useAuth";
 
 export interface OrderDetailsData {
   id: string;
@@ -25,11 +26,12 @@ export interface OrderDetailsData {
 
 export function useOrderDetails(orderId: string | null, isOpen: boolean) {
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const { data: order, isLoading } = useQuery({
-    queryKey: ["order", orderId],
+    queryKey: ["order", orderId, user?.id],
     queryFn: async () => {
-      if (!orderId) return null;
+      if (!orderId || !user) return null;
       
       const { data, error } = await supabase
         .from("orders")
@@ -39,6 +41,7 @@ export function useOrderDetails(orderId: string | null, isOpen: boolean) {
           order_items (*)
         `)
         .eq("id", orderId)
+        .eq("user_id", user.id) // Only fetch orders that belong to this user
         .single();
       
       if (error) {
@@ -52,7 +55,7 @@ export function useOrderDetails(orderId: string | null, isOpen: boolean) {
       
       return data as OrderDetailsData;
     },
-    enabled: !!orderId && isOpen,
+    enabled: !!orderId && !!user && isOpen,
   });
 
   return {

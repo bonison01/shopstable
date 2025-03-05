@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,11 +17,14 @@ export const useCustomers = () => {
 
   // Fetch customers data
   const { data: customers, isLoading, refetch } = useQuery({
-    queryKey: ["customers"],
+    queryKey: ["customers", user?.id],
     queryFn: async () => {
+      if (!user) return [];
+      
       const { data, error } = await supabase
         .from("customers")
         .select("*")
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -64,11 +68,14 @@ export const useCustomers = () => {
 
   // Handle customer deletion
   const handleDeleteCustomers = async () => {
+    if (!user) return;
+    
     try {
       const { error } = await supabase
         .from("customers")
         .delete()
-        .in("id", selectedCustomers);
+        .in("id", selectedCustomers)
+        .eq("user_id", user.id); // Only delete customers that belong to this user
 
       if (error) throw error;
 
