@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/utils/format";
+import { Label } from "@/components/ui/label";
 import { 
   Package, 
   Plus, 
@@ -36,6 +37,51 @@ import {
 import AddProductForm from "@/components/forms/AddProductForm";
 import * as XLSX from 'xlsx';
 
+// Define the Product interface to match our database schema
+interface Product {
+  id: string;
+  name: string;
+  sku: string;
+  category: string;
+  category_type?: string | null;
+  description?: string | null;
+  price: number;
+  wholesale_price?: number | null;
+  retail_price?: number | null;
+  trainer_price?: number | null;
+  purchased_price?: number | null;
+  stock: number;
+  threshold: number;
+  image_url?: string | null;
+  created_at?: string | null;
+  last_updated?: string | null;
+}
+
+// Define Excel import row structure
+interface ExcelRow {
+  [key: string]: any;
+  name?: string;
+  Name?: string;
+  sku?: string;
+  SKU?: string;
+  category?: string;
+  Category?: string;
+  category_type?: string;
+  price?: number | string;
+  Price?: number | string;
+  wholesale_price?: number | string;
+  retail_price?: number | string;
+  trainer_price?: number | string;
+  purchased_price?: number | string;
+  stock?: number | string;
+  Stock?: number | string;
+  threshold?: number | string;
+  Threshold?: number | string;
+  description?: string;
+  Description?: string;
+  image_url?: string;
+}
+
 const Inventory = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -44,7 +90,7 @@ const Inventory = () => {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const { toast } = useToast();
@@ -200,7 +246,7 @@ const Inventory = () => {
         const worksheet = workbook.Sheets[workbook.SheetNames[0]];
         
         // Convert to JSON
-        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+        const jsonData = XLSX.utils.sheet_to_json(worksheet) as ExcelRow[];
         
         // Process and validate each product
         let successes = 0;
@@ -210,19 +256,19 @@ const Inventory = () => {
           try {
             // Map Excel columns to database fields
             const product = {
-              name: item.name || item.Name,
-              sku: item.sku || item.SKU,
-              category: item.category || item.Category,
-              category_type: item.category_type || item.category_type || null,
-              price: parseFloat(item.price || item.Price || 0),
-              wholesale_price: parseFloat(item.wholesale_price || item.wholesale_price || 0) || null,
-              retail_price: parseFloat(item.retail_price || item.retail_price || 0) || null,
-              trainer_price: parseFloat(item.trainer_price || item.trainer_price || 0) || null,
-              purchased_price: parseFloat(item.purchased_price || item.purchased_price || 0) || null,
-              stock: parseInt(item.stock || item.Stock || 0),
-              threshold: parseInt(item.threshold || item.Threshold || 5),
+              name: item.name || item.Name || '',
+              sku: item.sku || item.SKU || '',
+              category: item.category || item.Category || '',
+              category_type: item.category_type || null,
+              price: parseFloat(String(item.price || item.Price || 0)),
+              wholesale_price: parseFloat(String(item.wholesale_price || 0)) || null,
+              retail_price: parseFloat(String(item.retail_price || 0)) || null,
+              trainer_price: parseFloat(String(item.trainer_price || 0)) || null,
+              purchased_price: parseFloat(String(item.purchased_price || 0)) || null,
+              stock: parseInt(String(item.stock || item.Stock || 0)),
+              threshold: parseInt(String(item.threshold || item.Threshold || 5)),
               description: item.description || item.Description || null,
-              image_url: item.image_url || item.image_url || null
+              image_url: item.image_url || null
             };
             
             // Validate required fields
@@ -538,6 +584,45 @@ const Inventory = () => {
                 </DialogClose>
                 <Button variant="destructive" onClick={handleDeleteProduct}>
                   Delete
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          
+          {/* Import Dialog */}
+          <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Import Inventory from Excel</DialogTitle>
+                <DialogDescription>
+                  Upload an Excel file to import or update products. The file should contain columns for product details.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="excel-file">Excel File</Label>
+                  <Input 
+                    id="excel-file" 
+                    type="file" 
+                    accept=".xlsx,.xls"
+                    onChange={handleFileChange}
+                  />
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  <p className="font-medium mb-1">Required columns:</p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>name (Product Name)</li>
+                    <li>sku (SKU)</li>
+                    <li>category (Category)</li>
+                  </ul>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setImportDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleImportFromExcel} disabled={!importFile || isImporting}>
+                  {isImporting ? "Importing..." : "Import"}
                 </Button>
               </DialogFooter>
             </DialogContent>
