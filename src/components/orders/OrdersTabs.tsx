@@ -1,10 +1,9 @@
 
 import { useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { OrdersTable } from "./OrdersTable";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs } from "@/components/ui/tabs";
 import { EditableOrderData } from "@/hooks/use-orders";
+import { OrdersTabsList } from "./tabs/OrdersTabsList";
+import { OrdersTabContent } from "./tabs/OrdersTabContent";
 
 interface OrdersTabsProps {
   filteredOrders: any[];
@@ -47,123 +46,94 @@ export const OrdersTabs = ({
 
   return (
     <Tabs defaultValue="all" className="w-full" onValueChange={setActiveTab}>
-      <TabsList className="mb-4 bg-background">
-        <TabsTrigger value="all" className="relative">
-          All
-          <Badge variant="outline" className="ml-2 -mr-1">
-            {isLoading ? <Skeleton className="h-4 w-4" /> : filteredOrders.length}
-          </Badge>
-        </TabsTrigger>
-        <TabsTrigger value="pending" className="relative">
-          Pending
-          <Badge variant="outline" className="ml-2 -mr-1">
-            {isLoading ? <Skeleton className="h-4 w-4" /> : pendingCount}
-          </Badge>
-        </TabsTrigger>
-        <TabsTrigger value="processing" className="relative">
-          Processing
-          <Badge variant="outline" className="ml-2 -mr-1">
-            {isLoading ? <Skeleton className="h-4 w-4" /> : processingCount}
-          </Badge>
-        </TabsTrigger>
-        <TabsTrigger value="shipped" className="relative">
-          Shipped
-          <Badge variant="outline" className="ml-2 -mr-1">
-            {isLoading ? <Skeleton className="h-4 w-4" /> : shippedCount}
-          </Badge>
-        </TabsTrigger>
-        <TabsTrigger value="delivered" className="relative">
-          Delivered
-          <Badge variant="outline" className="ml-2 -mr-1">
-            {isLoading ? <Skeleton className="h-4 w-4" /> : deliveredCount}
-          </Badge>
-        </TabsTrigger>
-      </TabsList>
+      <OrdersTabsList
+        isLoading={isLoading}
+        filteredOrders={filteredOrders}
+        pendingCount={pendingCount}
+        processingCount={processingCount}
+        shippedCount={shippedCount}
+        deliveredCount={deliveredCount}
+      />
 
-      <TabsContent value="all" className="mt-0">
-        <OrdersTable
-          orders={filteredOrders}
-          isLoading={isLoading}
-          onAddOrder={onAddOrder}
-          editingOrder={editingOrder}
-          startEditing={startEditing}
-          cancelEditing={cancelEditing}
-          updateOrder={updateOrder}
-          isUpdating={isUpdating}
-          handleStatusChange={handleStatusChange}
-          handlePaymentStatusChange={handlePaymentStatusChange}
-          handlePaymentAmountChange={handlePaymentAmountChange}
-          openOrderDetails={openOrderDetails}
-        />
-      </TabsContent>
+      <OrdersTabContent
+        value="all"
+        orders={filteredOrders}
+        isLoading={isLoading}
+        onAddOrder={onAddOrder}
+        editingOrder={editingOrder}
+        startEditing={startEditing}
+        cancelEditing={cancelEditing}
+        updateOrder={updateOrder}
+        isUpdating={isUpdating}
+        handleStatusChange={handleStatusChange}
+        handlePaymentStatusChange={handlePaymentStatusChange}
+        handlePaymentAmountChange={handlePaymentAmountChange}
+        openOrderDetails={openOrderDetails}
+      />
 
-      <TabsContent value="pending" className="mt-0">
-        <OrdersTable
-          orders={getOrdersByStatus("pending")}
-          isLoading={isLoading}
-          onAddOrder={onAddOrder}
-          editingOrder={editingOrder}
-          startEditing={startEditing}
-          cancelEditing={cancelEditing}
-          updateOrder={updateOrder}
-          isUpdating={isUpdating}
-          handleStatusChange={handleStatusChange}
-          handlePaymentStatusChange={handlePaymentStatusChange}
-          handlePaymentAmountChange={handlePaymentAmountChange}
-          openOrderDetails={openOrderDetails}
-        />
-      </TabsContent>
+      <OrdersTabContent
+        value="pending"
+        orders={getOrdersByStatus("pending")}
+        isLoading={isLoading}
+        onAddOrder={onAddOrder}
+        editingOrder={editingOrder}
+        startEditing={startEditing}
+        cancelEditing={cancelEditing}
+        updateOrder={updateOrder}
+        isUpdating={isUpdating}
+        handleStatusChange={handleStatusChange}
+        handlePaymentStatusChange={handlePaymentStatusChange}
+        handlePaymentAmountChange={handlePaymentAmountChange}
+        openOrderDetails={openOrderDetails}
+      />
 
-      <TabsContent value="processing" className="mt-0">
-        <OrdersTable
-          orders={getOrdersByStatus("processing")}
-          isLoading={isLoading}
-          onAddOrder={onAddOrder}
-          editingOrder={editingOrder}
-          startEditing={startEditing}
-          cancelEditing={cancelEditing}
-          updateOrder={updateOrder}
-          isUpdating={isUpdating}
-          handleStatusChange={handleStatusChange}
-          handlePaymentStatusChange={handlePaymentStatusChange}
-          handlePaymentAmountChange={handlePaymentAmountChange}
-          openOrderDetails={openOrderDetails}
-        />
-      </TabsContent>
+      <OrdersTabContent
+        value="processing"
+        orders={getOrdersByStatus("processing")}
+        isLoading={isLoading}
+        onAddOrder={onAddOrder}
+        editingOrder={editingOrder}
+        startEditing={startEditing}
+        cancelEditing={cancelEditing}
+        updateOrder={updateOrder}
+        isUpdating={isUpdating}
+        handleStatusChange={handleStatusChange}
+        handlePaymentStatusChange={handlePaymentStatusChange}
+        handlePaymentAmountChange={handlePaymentAmountChange}
+        openOrderDetails={openOrderDetails}
+      />
 
-      <TabsContent value="shipped" className="mt-0">
-        <OrdersTable
-          orders={getOrdersByStatus("shipped")}
-          isLoading={isLoading}
-          onAddOrder={onAddOrder}
-          editingOrder={editingOrder}
-          startEditing={startEditing}
-          cancelEditing={cancelEditing}
-          updateOrder={updateOrder}
-          isUpdating={isUpdating}
-          handleStatusChange={handleStatusChange}
-          handlePaymentStatusChange={handlePaymentStatusChange}
-          handlePaymentAmountChange={handlePaymentAmountChange}
-          openOrderDetails={openOrderDetails}
-        />
-      </TabsContent>
+      <OrdersTabContent
+        value="shipped"
+        orders={getOrdersByStatus("shipped")}
+        isLoading={isLoading}
+        onAddOrder={onAddOrder}
+        editingOrder={editingOrder}
+        startEditing={startEditing}
+        cancelEditing={cancelEditing}
+        updateOrder={updateOrder}
+        isUpdating={isUpdating}
+        handleStatusChange={handleStatusChange}
+        handlePaymentStatusChange={handlePaymentStatusChange}
+        handlePaymentAmountChange={handlePaymentAmountChange}
+        openOrderDetails={openOrderDetails}
+      />
 
-      <TabsContent value="delivered" className="mt-0">
-        <OrdersTable
-          orders={getOrdersByStatus("delivered")}
-          isLoading={isLoading}
-          onAddOrder={onAddOrder}
-          editingOrder={editingOrder}
-          startEditing={startEditing}
-          cancelEditing={cancelEditing}
-          updateOrder={updateOrder}
-          isUpdating={isUpdating}
-          handleStatusChange={handleStatusChange}
-          handlePaymentStatusChange={handlePaymentStatusChange}
-          handlePaymentAmountChange={handlePaymentAmountChange}
-          openOrderDetails={openOrderDetails}
-        />
-      </TabsContent>
+      <OrdersTabContent
+        value="delivered"
+        orders={getOrdersByStatus("delivered")}
+        isLoading={isLoading}
+        onAddOrder={onAddOrder}
+        editingOrder={editingOrder}
+        startEditing={startEditing}
+        cancelEditing={cancelEditing}
+        updateOrder={updateOrder}
+        isUpdating={isUpdating}
+        handleStatusChange={handleStatusChange}
+        handlePaymentStatusChange={handlePaymentStatusChange}
+        handlePaymentAmountChange={handlePaymentAmountChange}
+        openOrderDetails={openOrderDetails}
+      />
     </Tabs>
   );
 };
