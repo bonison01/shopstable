@@ -2,6 +2,8 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatCurrency, formatDate, getStatusColor } from "@/utils/format";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { DollarSign, ArrowUpCircle } from "lucide-react";
 
 interface OrderDetailsTabProps {
   order: any;
@@ -21,9 +23,33 @@ export function OrderDetailsTab({ order }: OrderDetailsTabProps) {
                    status === "partial" ? "outline" :
                    status === "pending" ? "secondary" : 
                    "destructive";
-    return <Badge variant={variant}>
-      {status.charAt(0).toUpperCase() + status.slice(1)}
-    </Badge>;
+    
+    const showCashFlowIcon = status === "paid" || (status === "partial" && order.payment_amount);
+    
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="inline-flex items-center gap-1">
+              <Badge variant={variant}>
+                {showCashFlowIcon && <DollarSign className="h-3 w-3 mr-1" />}
+                {status.charAt(0).toUpperCase() + status.slice(1)}
+              </Badge>
+              {showCashFlowIcon && (
+                <ArrowUpCircle className="h-4 w-4 text-green-500" />
+              )}
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            {showCashFlowIcon ? (
+              <p>Payment tracked in cash flow system</p>
+            ) : (
+              <p>No payment recorded in cash flow</p>
+            )}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
   };
 
   const calculateDueAmount = () => {

@@ -123,6 +123,10 @@ export const useOrders = () => {
     setIsUpdating(true);
     
     try {
+      // Store original payment values to detect changes
+      const originalPaymentStatus = editingOrder.payment_status;
+      const originalPaymentAmount = editingOrder.payment_amount;
+      
       // Prepare update data based on payment status
       const updateData: any = {
         status: editingOrder.status,
@@ -132,6 +136,9 @@ export const useOrders = () => {
       // Include payment_amount only for partial payments
       if (editingOrder.payment_status === 'partial' && editingOrder.payment_amount !== undefined) {
         updateData.payment_amount = editingOrder.payment_amount;
+      } else if (editingOrder.payment_status === 'paid') {
+        // For paid status, set payment_amount to total
+        updateData.payment_amount = editingOrder.total;
       } else {
         // Set payment_amount to null for other payment statuses
         updateData.payment_amount = null;
@@ -150,6 +157,20 @@ export const useOrders = () => {
         title: "Order Updated",
         description: `Order #${editingOrder.id.substring(0, 8)} has been updated successfully.`,
       });
+      
+      // Display cash flow notification when payment is recorded
+      const paymentChanged = 
+        (originalPaymentStatus !== 'paid' && editingOrder.payment_status === 'paid') ||
+        (originalPaymentStatus !== 'partial' && editingOrder.payment_status === 'partial') ||
+        (originalPaymentStatus === 'partial' && originalPaymentAmount !== editingOrder.payment_amount);
+      
+      if (paymentChanged) {
+        toast({
+          title: "Payment Recorded",
+          description: "This payment has been automatically tracked in the cash flow system.",
+          variant: "default",
+        });
+      }
       
       refetch();
       setEditingOrder(null);

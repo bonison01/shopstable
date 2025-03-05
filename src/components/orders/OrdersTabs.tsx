@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Tabs } from "@/components/ui/tabs";
 import { EditableOrderData } from "@/hooks/use-orders";
@@ -39,20 +38,43 @@ export const OrdersTabs = ({
   const [activeTab, setActiveTab] = useState("all");
 
   // Count of orders by status
-  const pendingCount = getOrdersByStatus("pending").length;
-  const processingCount = getOrdersByStatus("processing").length;
-  const shippedCount = getOrdersByStatus("shipped").length;
-  const deliveredCount = getOrdersByStatus("delivered").length;
+  const pendingOrders = getOrdersByStatus("pending");
+  const processingOrders = getOrdersByStatus("processing");
+  const shippedOrders = getOrdersByStatus("shipped");
+  const deliveredOrders = getOrdersByStatus("delivered");
+  
+  // Calculate payment totals for each status
+  const calculatePaymentTotal = (orders: any[]) => {
+    return orders.reduce((total, order) => {
+      if (order.payment_status === 'paid') {
+        return total + (order.total || 0);
+      } else if (order.payment_status === 'partial' && order.payment_amount) {
+        return total + order.payment_amount;
+      }
+      return total;
+    }, 0);
+  };
+  
+  const allPaymentTotal = calculatePaymentTotal(filteredOrders);
+  const pendingPaymentTotal = calculatePaymentTotal(pendingOrders);
+  const processingPaymentTotal = calculatePaymentTotal(processingOrders);
+  const shippedPaymentTotal = calculatePaymentTotal(shippedOrders);
+  const deliveredPaymentTotal = calculatePaymentTotal(deliveredOrders);
 
   return (
     <Tabs defaultValue="all" className="w-full" onValueChange={setActiveTab}>
       <OrdersTabsList
         isLoading={isLoading}
         filteredOrders={filteredOrders}
-        pendingCount={pendingCount}
-        processingCount={processingCount}
-        shippedCount={shippedCount}
-        deliveredCount={deliveredCount}
+        pendingCount={pendingOrders.length}
+        processingCount={processingOrders.length}
+        shippedCount={shippedOrders.length}
+        deliveredCount={deliveredOrders.length}
+        allPaymentTotal={allPaymentTotal}
+        pendingPaymentTotal={pendingPaymentTotal}
+        processingPaymentTotal={processingPaymentTotal}
+        shippedPaymentTotal={shippedPaymentTotal}
+        deliveredPaymentTotal={deliveredPaymentTotal}
       />
 
       <OrdersTabContent
@@ -73,7 +95,7 @@ export const OrdersTabs = ({
 
       <OrdersTabContent
         value="pending"
-        orders={getOrdersByStatus("pending")}
+        orders={pendingOrders}
         isLoading={isLoading}
         onAddOrder={onAddOrder}
         editingOrder={editingOrder}
@@ -89,7 +111,7 @@ export const OrdersTabs = ({
 
       <OrdersTabContent
         value="processing"
-        orders={getOrdersByStatus("processing")}
+        orders={processingOrders}
         isLoading={isLoading}
         onAddOrder={onAddOrder}
         editingOrder={editingOrder}
@@ -105,7 +127,7 @@ export const OrdersTabs = ({
 
       <OrdersTabContent
         value="shipped"
-        orders={getOrdersByStatus("shipped")}
+        orders={shippedOrders}
         isLoading={isLoading}
         onAddOrder={onAddOrder}
         editingOrder={editingOrder}
@@ -121,7 +143,7 @@ export const OrdersTabs = ({
 
       <OrdersTabContent
         value="delivered"
-        orders={getOrdersByStatus("delivered")}
+        orders={deliveredOrders}
         isLoading={isLoading}
         onAddOrder={onAddOrder}
         editingOrder={editingOrder}

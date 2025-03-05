@@ -3,6 +3,8 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { formatCurrency } from "@/utils/format";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { DollarSign } from "lucide-react";
 
 interface PaymentStatusCellProps {
   paymentStatus: string;
@@ -62,6 +64,9 @@ export function PaymentStatusCell({
               max={total}
               step={0.01}
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              This payment will be recorded in the cash flow system
+            </p>
           </div>
         )}
       </div>
@@ -69,27 +74,48 @@ export function PaymentStatusCell({
   }
   
   return (
-    <div>
-      <Badge 
-        variant={paymentStatus === 'paid' ? 'default' : 
-                paymentStatus === 'partial' ? 'outline' :
-                paymentStatus === 'pending' ? 'secondary' : 
-                'destructive'}
-      >
-        {paymentStatus.charAt(0).toUpperCase() + paymentStatus.slice(1)}
-      </Badge>
-      
-      {paymentStatus === 'partial' && paymentAmount && (
-        <div className="text-xs mt-1">
-          <div>Paid: {formatCurrency(paymentAmount)}</div>
-          <div>Due: {formatCurrency(calculateDueAmount())}</div>
-        </div>
-      )}
-      {paymentStatus === 'pending' && (
-        <div className="text-xs mt-1">
-          Due: {formatCurrency(total)}
-        </div>
-      )}
-    </div>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="cursor-help">
+            <Badge 
+              variant={paymentStatus === 'paid' ? 'default' : 
+                      paymentStatus === 'partial' ? 'outline' :
+                      paymentStatus === 'pending' ? 'secondary' : 
+                      'destructive'}
+              className={paymentStatus === 'paid' || paymentStatus === 'partial' ? 'flex items-center gap-1' : ''}
+            >
+              {paymentStatus === 'paid' || paymentStatus === 'partial' ? (
+                <DollarSign className="h-3 w-3" />
+              ) : null}
+              {paymentStatus.charAt(0).toUpperCase() + paymentStatus.slice(1)}
+            </Badge>
+            
+            {paymentStatus === 'partial' && paymentAmount && (
+              <div className="text-xs mt-1">
+                <div>Paid: {formatCurrency(paymentAmount)}</div>
+                <div>Due: {formatCurrency(calculateDueAmount())}</div>
+              </div>
+            )}
+            {paymentStatus === 'pending' && (
+              <div className="text-xs mt-1">
+                Due: {formatCurrency(total)}
+              </div>
+            )}
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>
+          {paymentStatus === 'paid' && (
+            <p>Full payment of {formatCurrency(total)} has been recorded in cash flow</p>
+          )}
+          {paymentStatus === 'partial' && paymentAmount && (
+            <p>Payment of {formatCurrency(paymentAmount)} has been recorded in cash flow</p>
+          )}
+          {paymentStatus === 'pending' && (
+            <p>No payment has been recorded yet</p>
+          )}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
