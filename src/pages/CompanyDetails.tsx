@@ -1,5 +1,5 @@
 
-import { useParams } from "react-router-dom";
+import { useParams, Navigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -9,11 +9,21 @@ import { useSidebar } from "@/hooks/use-sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Building2, Users, Boxes, CreditCard, Calendar } from "lucide-react";
 import { format } from "date-fns";
+import { useAuth } from "@/contexts/auth/useAuth";
 import { CompanyAccessType } from "@/contexts/auth/types";
 
 const CompanyDetails = () => {
   const { companyId } = useParams<{ companyId: string }>();
   const { isOpen, toggle, close, collapsed, toggleCollapse } = useSidebar();
+  const { staffCompanyAccess } = useAuth();
+
+  // Check if user has access to this company
+  const hasAccess = staffCompanyAccess?.some(company => company.id === companyId);
+
+  // If user doesn't have access, redirect to companies page
+  if (staffCompanyAccess && !hasAccess) {
+    return <Navigate to="/companies" replace />;
+  }
 
   // Fetch company details
   const { data: company, isLoading: companyLoading } = useQuery({

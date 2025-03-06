@@ -38,16 +38,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Fetch company access for staff members
   const fetchCompanyAccess = async (email: string) => {
     try {
+      setIsLoading(true);
       // First get staff ID by email
       const { data: staffData, error: staffError } = await supabase
         .from('staff')
         .select('id')
         .eq('staff_email', email)
-        .single();
+        .maybeSingle();
 
-      if (staffError || !staffData) {
-        console.log('Not found as staff or error:', staffError);
+      if (staffError) {
+        console.error('Error fetching staff data:', staffError);
         setStaffCompanyAccess(null);
+        setIsLoading(false);
+        return;
+      }
+
+      if (!staffData) {
+        console.log('No staff record found for email:', email);
+        setStaffCompanyAccess(null);
+        setIsLoading(false);
         return;
       }
 
@@ -60,13 +69,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (accessError) {
         console.error('Error fetching company access:', accessError);
         setStaffCompanyAccess(null);
+        setIsLoading(false);
         return;
       }
 
+      console.log('Fetched company access:', accessData);
       setStaffCompanyAccess(accessData as CompanyAccessType[]);
     } catch (error) {
       console.error('Error in fetchCompanyAccess:', error);
       setStaffCompanyAccess(null);
+    } finally {
+      setIsLoading(false);
     }
   };
 

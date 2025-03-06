@@ -16,6 +16,7 @@ export const useAuthFunctions = () => {
   const fetchProfile = async (userId: string) => {
     setIsLoading(true);
     try {
+      // First check if user is in profiles
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -23,7 +24,30 @@ export const useAuthFunctions = () => {
         .single();
 
       if (error) {
-        throw error;
+        // Check if user is a staff member
+        const { data: staffData, error: staffError } = await supabase
+          .from('staff')
+          .select('*')
+          .eq('staff_email', profile?.email)
+          .maybeSingle();
+
+        if (staffError || !staffData) {
+          console.error('Error fetching user profile:', error.message);
+          setIsLoading(false);
+          return;
+        }
+
+        // If staff is found, set staff flag
+        setIsStaff(true);
+        setProfile({
+          id: userId,
+          first_name: staffData.first_name,
+          last_name: staffData.last_name,
+          email: staffData.staff_email,
+          role: 'staff'
+        });
+        setIsLoading(false);
+        return;
       }
 
       if (data) {
