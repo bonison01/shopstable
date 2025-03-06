@@ -89,34 +89,34 @@ export const useCompanyDetails = (companyId: string | undefined, hasAccess: () =
         let ordersCount = 0;
         
         try {
-          const { count: customerCount } = await supabase
+          const { count } = await supabase
             .from('customers')
             .select('*', { count: 'exact', head: true })
             .eq('user_id', companyId);
           
-          customersCount = customerCount || 0;
+          customersCount = count || 0;
         } catch (err) {
           console.error("Error fetching customers count:", err);
         }
         
         try {
-          const { count: productCount } = await supabase
+          const { count } = await supabase
             .from('products')
             .select('*', { count: 'exact', head: true })
             .eq('user_id', companyId);
           
-          productsCount = productCount || 0;
+          productsCount = count || 0;
         } catch (err) {
           console.error("Error fetching products count:", err);
         }
         
         try {
-          const { count: orderCount } = await supabase
+          const { count } = await supabase
             .from('orders')
             .select('*', { count: 'exact', head: true })
             .eq('user_id', companyId);
           
-          ordersCount = orderCount || 0;
+          ordersCount = count || 0;
         } catch (err) {
           console.error("Error fetching orders count:", err);
         }
