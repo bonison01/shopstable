@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -83,7 +84,8 @@ const CompanyDetails = () => {
         
         console.log("Fetched company data:", companyData);
         
-        // Then, fetch owner details separately
+        // Then, fetch owner details separately - no reassignment
+        let finalOwnerData: OwnerData;
         const { data: ownerData, error: ownerError } = await supabase
           .from('profiles')
           .select(`
@@ -94,40 +96,38 @@ const CompanyDetails = () => {
           .eq('id', companyId)
           .single();
           
-        if (ownerError) {
+        if (ownerError || !ownerData) {
           console.error("Error fetching owner data:", ownerError);
-          // Create fallback owner data
-          const fallbackOwner: OwnerData = {
+          // Use fallback owner data
+          finalOwnerData = {
             first_name: "Unknown",
             last_name: "Owner",
             email: "unknown@example.com"
           };
-          ownerData = fallbackOwner;
+        } else {
+          finalOwnerData = ownerData;
         }
         
-        // Get count statistics
+        // Get count statistics - use .maybeSingle() instead of .single()
+        // and handle count with proper type handling
         const customersResult = await supabase
           .from('customers')
-          .select('id', { count: 'exact' })
+          .select('id', { count: 'exact', head: true })
           .eq('company_id', companyId);
           
         const productsResult = await supabase
           .from('products')
-          .select('id', { count: 'exact' })
+          .select('id', { count: 'exact', head: true })
           .eq('company_id', companyId);
           
         const ordersResult = await supabase
           .from('orders')
-          .select('id', { count: 'exact' })
+          .select('id', { count: 'exact', head: true })
           .eq('company_id', companyId);
 
         const companyWithDetails: CompanyData = {
           ...companyData,
-          owner: ownerData || {
-            first_name: "Unknown",
-            last_name: "Owner",
-            email: "unknown@example.com"
-          },
+          owner: finalOwnerData,
           customers_count: customersResult.count || 0,
           products_count: productsResult.count || 0,
           orders_count: ordersResult.count || 0
