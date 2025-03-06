@@ -88,7 +88,7 @@ export const CustomersList = ({
                 </TableCell>
                 <TableCell className="hidden md:table-cell">{customer.total_orders}</TableCell>
                 <TableCell className="text-right">
-                  ${customer.total_spent?.toFixed(2)}
+                ₹{customer.total_spent?.toFixed(2)}
                 </TableCell>
                 <TableCell>
                   <DropdownMenu>

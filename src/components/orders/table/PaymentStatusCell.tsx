@@ -89,7 +89,9 @@ export function PaymentStatusCell({
               className={paymentStatus === 'paid' || paymentStatus === 'partial' ? 'flex items-center gap-1' : ''}
             >
               {paymentStatus === 'paid' || paymentStatus === 'partial' ? (
-                <DollarSign className="h-3 w-3" />
+
+                <span className="absolute left-3 top-2.5 h-3 w-3 text-muted-foreground">₹</span>
+
               ) : null}
               {paymentStatus.charAt(0).toUpperCase() + paymentStatus.slice(1)}
             </Badge>
