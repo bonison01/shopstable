@@ -1,11 +1,12 @@
+
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import Auth from "./pages/Auth";
 import ProtectedRoute from "./components/ProtectedRoute";
-import Dashboard from "./pages/Dashboard";
+import Dashboard from "./pages/Index";
 import Staff from "./pages/Staff";
 import Customers from "./pages/Customers";
-import Products from "./pages/Products";
+import Products from "./pages/Inventory";
 import Orders from "./pages/Orders";
 import Settings from "./pages/Settings";
 import CompanyDetails from "./pages/CompanyDetails";

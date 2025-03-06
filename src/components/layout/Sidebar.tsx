@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -166,21 +167,19 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
             </h2>
             <div className="space-y-1">
               {staffCompanyAccess?.map((company) => (
-                <NavLink
+                <Link
                   key={company.id}
                   to={`/companies/${company.id}`}
-                  className={({ isActive }) =>
-                    cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:text-primary",
-                      isActive
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground hover:bg-muted"
-                    )
-                  }
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:text-primary",
+                    pathname === `/companies/${company.id}`
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-muted"
+                  )}
                 >
                   <Building2 className={cn("h-4 w-4", collapsed ? "mx-auto" : "")} />
                   {!collapsed && <span>{company.business_name}</span>}
-                </NavLink>
+                </Link>
               ))}
             </div>
           </div>
