@@ -24,15 +24,28 @@ export const useAuthFunctions = () => {
         .single();
 
       if (error) {
+        console.log('Error fetching profile, checking if staff member:', error.message);
+        
+        // Get user email from auth
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        
+        if (userError || !userData.user) {
+          console.error('Error fetching user data:', userError?.message);
+          setIsLoading(false);
+          return;
+        }
+        
+        const userEmail = userData.user.email;
+        
         // Check if user is a staff member
         const { data: staffData, error: staffError } = await supabase
           .from('staff')
           .select('*')
-          .eq('staff_email', profile?.email)
+          .eq('staff_email', userEmail)
           .maybeSingle();
 
         if (staffError || !staffData) {
-          console.error('Error fetching user profile:', error.message);
+          console.error('Error fetching staff profile:', staffError?.message);
           setIsLoading(false);
           return;
         }

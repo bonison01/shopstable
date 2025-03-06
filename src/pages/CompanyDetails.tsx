@@ -1,235 +1,319 @@
 
-import { useParams, Navigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/auth/useAuth";
 import { cn } from "@/lib/utils";
+import { useSidebar } from "@/hooks/use-sidebar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Navbar } from "@/components/layout/Navbar";
-import { useSidebar } from "@/hooks/use-sidebar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Building2, Users, Boxes, CreditCard, Calendar } from "lucide-react";
-import { format } from "date-fns";
-import { useAuth } from "@/contexts/auth/useAuth";
-import { CompanyAccessType } from "@/contexts/auth/types";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2, Building2, Users, Package2, FileText } from "lucide-react";
+
+// Types
+interface CompanyData {
+  id: string;
+  business_name: string;
+  created_at: string;
+  owner: {
+    first_name: string;
+    last_name: string;
+    email: string;
+  };
+  customers_count: number;
+  products_count: number;
+  orders_count: number;
+}
 
 const CompanyDetails = () => {
   const { companyId } = useParams<{ companyId: string }>();
   const { isOpen, toggle, close, collapsed, toggleCollapse } = useSidebar();
-  const { staffCompanyAccess } = useAuth();
+  const { staffCompanyAccess, user } = useAuth();
+  const [company, setCompany] = useState<CompanyData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   // Check if user has access to this company
-  const hasAccess = staffCompanyAccess?.some(company => company.id === companyId);
+  const hasAccess = () => {
+    console.log("Checking access for company:", companyId);
+    console.log("Staff company access:", staffCompanyAccess);
+    
+    if (!staffCompanyAccess || !companyId) return false;
+    
+    const hasAccess = staffCompanyAccess.some(company => company.id === companyId);
+    console.log("Has access:", hasAccess);
+    return hasAccess;
+  };
 
-  // If user doesn't have access, redirect to companies page
-  if (staffCompanyAccess && !hasAccess) {
-    return <Navigate to="/companies" replace />;
+  useEffect(() => {
+    const fetchCompanyDetails = async () => {
+      if (!companyId) return;
+      
+      // Verify access
+      if (!hasAccess()) {
+        console.log("No access to this company");
+        setError("You don't have access to this company");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        console.log("Fetching company details for ID:", companyId);
+        setLoading(true);
+        
+        // Get company details and owner info
+        const { data, error } = await supabase
+          .from('profiles')
+          .select(`
+            id,
+            business_name,
+            created_at,
+            owner:id (
+              first_name,
+              last_name,
+              email
+            )
+          `)
+          .eq('id', companyId)
+          .single();
+
+        if (error) throw error;
+        
+        console.log("Fetched company data:", data);
+        
+        // Get count statistics
+        const [customersResult, productsResult, ordersResult] = await Promise.all([
+          supabase.from('customers').select('id', { count: 'exact' }).eq('company_id', companyId),
+          supabase.from('products').select('id', { count: 'exact' }).eq('company_id', companyId),
+          supabase.from('orders').select('id', { count: 'exact' }).eq('company_id', companyId)
+        ]);
+
+        const companyData: CompanyData = {
+          ...data,
+          customers_count: customersResult.count || 0,
+          products_count: productsResult.count || 0,
+          orders_count: ordersResult.count || 0
+        };
+
+        console.log("Company data with counts:", companyData);
+        setCompany(companyData);
+      } catch (error: any) {
+        console.error("Error fetching company details:", error);
+        setError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCompanyDetails();
+  }, [companyId, staffCompanyAccess]);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen bg-muted/40">
+        <Sidebar isOpen={isOpen} onClose={close} collapsed={collapsed} onToggleCollapse={toggleCollapse} />
+        <div className={cn(
+          "flex flex-1 flex-col transition-all duration-300 ease-in-out",
+          collapsed ? "md:ml-16" : "md:ml-64"
+        )}>
+          <Navbar toggleSidebar={toggle} isSidebarCollapsed={collapsed} />
+          <main className="flex items-center justify-center flex-1 p-4 md:p-6">
+            <div className="text-center">
+              <Loader2 className="h-10 w-10 animate-spin mx-auto mb-4 text-primary" />
+              <p>Loading company details...</p>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
   }
 
-  // Fetch company details
-  const { data: company, isLoading: companyLoading } = useQuery({
-    queryKey: ["company-details", companyId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("company_access")
-        .select("id, business_name, owner_id, staff_id, created_at")
-        .eq("id", companyId)
-        .single();
-
-      if (error) throw error;
-      return data as CompanyAccessType;
-    },
-    enabled: !!companyId
-  });
-
-  // Fetch owner profile
-  const { data: owner, isLoading: ownerLoading } = useQuery({
-    queryKey: ["company-owner", company?.owner_id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", company?.owner_id)
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!company?.owner_id
-  });
-
-  // Fetch company stats
-  const { data: stats, isLoading: statsLoading } = useQuery({
-    queryKey: ["company-stats", company?.owner_id],
-    queryFn: async () => {
-      const [customersResponse, productsResponse, ordersResponse] = await Promise.all([
-        supabase
-          .from("customers")
-          .select("count")
-          .eq("user_id", company?.owner_id),
-        supabase
-          .from("products")
-          .select("count")
-          .eq("user_id", company?.owner_id),
-        supabase
-          .from("orders")
-          .select("count, created_at")
-          .eq("user_id", company?.owner_id)
-          .order("created_at", { ascending: false })
-          .limit(1)
-      ]);
-
-      const customersCount = customersResponse.count || 0;
-      const productsCount = productsResponse.count || 0;
-      const ordersCount = ordersResponse.count || 0;
-      const latestOrderDate = ordersResponse.data && ordersResponse.data.length > 0 
-        ? ordersResponse.data[0].created_at 
-        : null;
-
-      return {
-        customers: customersCount,
-        products: productsCount,
-        orders: ordersCount,
-        latestOrderDate
-      };
-    },
-    enabled: !!company?.owner_id
-  });
-
-  const isLoading = companyLoading || ownerLoading || statsLoading;
-
-  if (isLoading) {
+  if (error || !hasAccess()) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex min-h-screen bg-muted/40">
+        <Sidebar isOpen={isOpen} onClose={close} collapsed={collapsed} onToggleCollapse={toggleCollapse} />
+        <div className={cn(
+          "flex flex-1 flex-col transition-all duration-300 ease-in-out",
+          collapsed ? "md:ml-16" : "md:ml-64"
+        )}>
+          <Navbar toggleSidebar={toggle} isSidebarCollapsed={collapsed} />
+          <main className="flex items-center justify-center flex-1 p-4 md:p-6">
+            <Card className="w-full max-w-lg">
+              <CardHeader>
+                <CardTitle className="text-red-500">Access Denied</CardTitle>
+                <CardDescription>
+                  {error || "You don't have access to this company"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <button 
+                  onClick={() => navigate('/companies')}
+                  className="inline-flex items-center rounded-md bg-primary px-3 py-2 text-sm font-medium text-white hover:bg-primary/90"
+                >
+                  Return to Companies List
+                </button>
+              </CardContent>
+            </Card>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
+  if (!company) {
+    return (
+      <div className="flex min-h-screen bg-muted/40">
+        <Sidebar isOpen={isOpen} onClose={close} collapsed={collapsed} onToggleCollapse={toggleCollapse} />
+        <div className={cn(
+          "flex flex-1 flex-col transition-all duration-300 ease-in-out",
+          collapsed ? "md:ml-16" : "md:ml-64"
+        )}>
+          <Navbar toggleSidebar={toggle} isSidebarCollapsed={collapsed} />
+          <main className="flex items-center justify-center flex-1 p-4 md:p-6">
+            <Card className="w-full max-w-lg">
+              <CardHeader>
+                <CardTitle>Company Not Found</CardTitle>
+                <CardDescription>
+                  The company you're looking for doesn't exist or you don't have access to it.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <button 
+                  onClick={() => navigate('/companies')}
+                  className="inline-flex items-center rounded-md bg-primary px-3 py-2 text-sm font-medium text-white hover:bg-primary/90"
+                >
+                  Return to Companies List
+                </button>
+              </CardContent>
+            </Card>
+          </main>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="flex min-h-screen bg-muted/40">
-      <Sidebar 
-        isOpen={isOpen} 
-        onClose={close} 
-        collapsed={collapsed}
-        onToggleCollapse={toggleCollapse}
-      />
-      
+      <Sidebar isOpen={isOpen} onClose={close} collapsed={collapsed} onToggleCollapse={toggleCollapse} />
       <div className={cn(
         "flex flex-1 flex-col transition-all duration-300 ease-in-out",
         collapsed ? "md:ml-16" : "md:ml-64"
       )}>
-        <Navbar 
-          toggleSidebar={toggle} 
-          isSidebarCollapsed={collapsed}
-        />
-        
+        <Navbar toggleSidebar={toggle} isSidebarCollapsed={collapsed} />
         <main className="flex-1 p-4 md:p-6">
           <div className="mb-6">
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center gap-2">
               <Building2 className="h-6 w-6 text-primary" />
-              <h1 className="text-2xl font-bold tracking-tight">{company?.business_name}</h1>
+              <h1 className="text-2xl font-bold tracking-tight">{company.business_name}</h1>
             </div>
             <p className="text-muted-foreground mt-1">
-              Company details and overview
+              Company dashboard and statistics
             </p>
           </div>
-          
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
+
+          <div className="grid gap-6 md:grid-cols-3 mb-6">
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center">
-                  <Users className="h-4 w-4 mr-2 text-blue-500" /> 
-                  Customers
-                </CardTitle>
+                <CardTitle className="text-lg font-medium">Customers</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats?.customers || 0}</div>
+                <div className="flex items-center">
+                  <Users className="h-5 w-5 text-muted-foreground mr-2" />
+                  <span className="text-2xl font-bold">{company.customers_count}</span>
+                </div>
               </CardContent>
             </Card>
-
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center">
-                  <Boxes className="h-4 w-4 mr-2 text-orange-500" /> 
-                  Products
-                </CardTitle>
+                <CardTitle className="text-lg font-medium">Products</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats?.products || 0}</div>
+                <div className="flex items-center">
+                  <Package2 className="h-5 w-5 text-muted-foreground mr-2" />
+                  <span className="text-2xl font-bold">{company.products_count}</span>
+                </div>
               </CardContent>
             </Card>
-
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center">
-                  <CreditCard className="h-4 w-4 mr-2 text-green-500" /> 
-                  Orders
-                </CardTitle>
+                <CardTitle className="text-lg font-medium">Orders</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats?.orders || 0}</div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center">
-                  <Calendar className="h-4 w-4 mr-2 text-purple-500" /> 
-                  Latest Order
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl font-bold">
-                  {stats?.latestOrderDate 
-                    ? format(new Date(stats.latestOrderDate), 'MMM d, yyyy')
-                    : 'No orders yet'}
+                <div className="flex items-center">
+                  <FileText className="h-5 w-5 text-muted-foreground mr-2" />
+                  <span className="text-2xl font-bold">{company.orders_count}</span>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Company Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">Company Name</h3>
-                  <p className="mt-1">{company?.business_name}</p>
-                </div>
-                
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">Access Granted</h3>
-                  <p className="mt-1">{company?.created_at ? format(new Date(company.created_at), 'MMMM d, yyyy') : 'Unknown'}</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Owner Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">Owner Name</h3>
-                  <p className="mt-1">{owner?.first_name} {owner?.last_name}</p>
-                </div>
-                
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">Email</h3>
-                  <p className="mt-1">{owner?.email}</p>
-                </div>
-                
-                {owner?.phone && (
-                  <div>
-                    <h3 className="text-sm font-medium text-muted-foreground">Phone</h3>
-                    <p className="mt-1">{owner?.phone}</p>
+          <Tabs defaultValue="overview">
+            <TabsList>
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="customers">Customers</TabsTrigger>
+              <TabsTrigger value="products">Products</TabsTrigger>
+              <TabsTrigger value="orders">Orders</TabsTrigger>
+            </TabsList>
+            <TabsContent value="overview">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Company Information</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm font-medium">Business Name</p>
+                      <p className="text-lg">{company.business_name}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Owner</p>
+                      <p className="text-lg">{company.owner.first_name} {company.owner.last_name}</p>
+                      <p className="text-sm text-muted-foreground">{company.owner.email}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Company Created</p>
+                      <p className="text-lg">{new Date(company.created_at).toLocaleDateString()}</p>
+                    </div>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            <TabsContent value="customers">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Customer Management</CardTitle>
+                  <CardDescription>View and manage company customers</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p>Customer management coming soon...</p>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            <TabsContent value="products">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Product Inventory</CardTitle>
+                  <CardDescription>View and manage company products</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p>Product management coming soon...</p>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            <TabsContent value="orders">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Order Management</CardTitle>
+                  <CardDescription>View and manage company orders</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p>Order management coming soon...</p>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </main>
       </div>
     </div>

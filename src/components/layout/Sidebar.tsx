@@ -24,8 +24,7 @@ interface NavItemProps {
 
 export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: SidebarProps) {
   const location = useLocation();
-  const { profile } = useAuth();
-  const { user, isAdmin, isStaff, staffCompanyAccess } = useAuth();
+  const { profile, isStaff, staffCompanyAccess } = useAuth();
   const { pathname } = useLocation();
 
   const NavItem = ({ icon, label, href, collapsed, active }: NavItemProps) => (
@@ -58,8 +57,19 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
     { icon: <Settings size={20} />, label: "Settings", href: "/settings" },
   ];
 
+  // Add Companies link for staff users
+  if (isStaff && staffCompanyAccess && staffCompanyAccess.length > 0) {
+    navigation.push({ 
+      icon: <Building2 size={20} />, 
+      label: "Companies", 
+      href: "/companies" 
+    });
+  }
+
+  console.log("Staff access:", isStaff, staffCompanyAccess);
+
   const sidebarContent = (
-    <div className="flex h-full flex-col px-2 py-4">
+    <div className="flex h-full flex-col px-2 py-4" id="main-sidebar">
       <div className="mb-10 flex items-center justify-between border-b pb-4">
         {!collapsed && (
           <div>

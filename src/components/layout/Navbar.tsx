@@ -1,4 +1,3 @@
-
 import { Menu, BellDot, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -94,7 +93,7 @@ export function Navbar({ toggleSidebar, isSidebarCollapsed }: NavbarProps) {
                 {staffCompanyAccess.map((company) => (
                   <DropdownMenuItem 
                     key={company.id}
-                    onClick={() => navigate(`/company/${company.id}`)}
+                    onClick={() => navigate(`/companies/${company.id}`)}
                   >
                     {company.business_name}
                   </DropdownMenuItem>
