@@ -1,45 +1,21 @@
 
-import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { useParams } from "react-router-dom";
 import { useAuth } from "@/contexts/auth/useAuth";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Navbar } from "@/components/layout/Navbar";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Building2, Users, Package2, FileText } from "lucide-react";
-
-// Types
-interface CompanyData {
-  id: string;
-  business_name: string;
-  created_at: string;
-  owner: {
-    first_name: string;
-    last_name: string;
-    email: string;
-  };
-  customers_count: number;
-  products_count: number;
-  orders_count: number;
-}
-
-interface OwnerData {
-  first_name: string;
-  last_name: string;
-  email: string;
-}
+import { useCompanyDetails } from "@/hooks/company/use-company-details";
+import { LoadingState } from "@/components/company/LoadingState";
+import { ErrorState } from "@/components/company/ErrorState";
+import { CompanyHeader } from "@/components/company/CompanyHeader";
+import { CompanyStatCards } from "@/components/company/CompanyStatCards";
+import { CompanyTabs } from "@/components/company/CompanyTabs";
 
 const CompanyDetails = () => {
   const { companyId } = useParams<{ companyId: string }>();
   const { isOpen, toggle, close, collapsed, toggleCollapse } = useSidebar();
-  const { staffCompanyAccess, user } = useAuth();
-  const [company, setCompany] = useState<CompanyData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate();
+  const { staffCompanyAccess } = useAuth();
 
   // Check if user has access to this company
   const hasAccess = () => {
@@ -53,202 +29,44 @@ const CompanyDetails = () => {
     return hasAccess;
   };
 
-  useEffect(() => {
-    const fetchCompanyDetails = async () => {
-      if (!companyId) return;
-      
-      // Verify access
-      if (!hasAccess()) {
-        console.log("No access to this company");
-        setError("You don't have access to this company");
-        setLoading(false);
-        return;
-      }
-
-      try {
-        console.log("Fetching company details for ID:", companyId);
-        setLoading(true);
-        
-        // First, fetch basic company details
-        const { data: companyData, error: companyError } = await supabase
-          .from('profiles')
-          .select(`
-            id,
-            business_name,
-            created_at
-          `)
-          .eq('id', companyId)
-          .single();
-
-        if (companyError) throw companyError;
-        
-        console.log("Fetched company data:", companyData);
-        
-        // Then, fetch owner details separately - no reassignment
-        let finalOwnerData: OwnerData;
-        const { data: ownerData, error: ownerError } = await supabase
-          .from('profiles')
-          .select(`
-            first_name,
-            last_name,
-            email
-          `)
-          .eq('id', companyId)
-          .single();
-          
-        if (ownerError || !ownerData) {
-          console.error("Error fetching owner data:", ownerError);
-          // Use fallback owner data
-          finalOwnerData = {
-            first_name: "Unknown",
-            last_name: "Owner",
-            email: "unknown@example.com"
-          };
-        } else {
-          finalOwnerData = ownerData;
-        }
-        
-        // Get count statistics - fix type issues by using simpler count query approach
-        // Using raw count queries to avoid deep type instantiation issues
-        let customersCount = 0;
-        let productsCount = 0;
-        let ordersCount = 0;
-        
-        try {
-          const { count: customerCount } = await supabase
-            .from('customers')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', companyId);
-          
-          customersCount = customerCount || 0;
-        } catch (err) {
-          console.error("Error fetching customers count:", err);
-        }
-        
-        try {
-          const { count: productCount } = await supabase
-            .from('products')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', companyId);
-          
-          productsCount = productCount || 0;
-        } catch (err) {
-          console.error("Error fetching products count:", err);
-        }
-        
-        try {
-          const { count: orderCount } = await supabase
-            .from('orders')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', companyId);
-          
-          ordersCount = orderCount || 0;
-        } catch (err) {
-          console.error("Error fetching orders count:", err);
-        }
-
-        const companyWithDetails: CompanyData = {
-          ...companyData,
-          owner: finalOwnerData,
-          customers_count: customersCount,
-          products_count: productsCount,
-          orders_count: ordersCount
-        };
-
-        console.log("Company data with counts:", companyWithDetails);
-        setCompany(companyWithDetails);
-      } catch (error: any) {
-        console.error("Error fetching company details:", error);
-        setError(error.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCompanyDetails();
-  }, [companyId, staffCompanyAccess]);
+  const { company, loading, error } = useCompanyDetails(companyId, hasAccess);
 
   if (loading) {
     return (
-      <div className="flex min-h-screen bg-muted/40">
-        <Sidebar isOpen={isOpen} onClose={close} collapsed={collapsed} onToggleCollapse={toggleCollapse} />
-        <div className={cn(
-          "flex flex-1 flex-col transition-all duration-300 ease-in-out",
-          collapsed ? "md:ml-16" : "md:ml-64"
-        )}>
-          <Navbar toggleSidebar={toggle} isSidebarCollapsed={collapsed} />
-          <main className="flex items-center justify-center flex-1 p-4 md:p-6">
-            <div className="text-center">
-              <Loader2 className="h-10 w-10 animate-spin mx-auto mb-4 text-primary" />
-              <p>Loading company details...</p>
-            </div>
-          </main>
-        </div>
-      </div>
+      <LoadingState
+        isOpen={isOpen}
+        toggle={toggle}
+        close={close}
+        collapsed={collapsed}
+        toggleCollapse={toggleCollapse}
+      />
     );
   }
 
   if (error || !hasAccess()) {
     return (
-      <div className="flex min-h-screen bg-muted/40">
-        <Sidebar isOpen={isOpen} onClose={close} collapsed={collapsed} onToggleCollapse={toggleCollapse} />
-        <div className={cn(
-          "flex flex-1 flex-col transition-all duration-300 ease-in-out",
-          collapsed ? "md:ml-16" : "md:ml-64"
-        )}>
-          <Navbar toggleSidebar={toggle} isSidebarCollapsed={collapsed} />
-          <main className="flex items-center justify-center flex-1 p-4 md:p-6">
-            <Card className="w-full max-w-lg">
-              <CardHeader>
-                <CardTitle className="text-red-500">Access Denied</CardTitle>
-                <CardDescription>
-                  {error || "You don't have access to this company"}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <button 
-                  onClick={() => navigate('/companies')}
-                  className="inline-flex items-center rounded-md bg-primary px-3 py-2 text-sm font-medium text-white hover:bg-primary/90"
-                >
-                  Return to Companies List
-                </button>
-              </CardContent>
-            </Card>
-          </main>
-        </div>
-      </div>
+      <ErrorState
+        isOpen={isOpen}
+        toggle={toggle}
+        close={close}
+        collapsed={collapsed}
+        toggleCollapse={toggleCollapse}
+        error={error}
+      />
     );
   }
 
   if (!company) {
     return (
-      <div className="flex min-h-screen bg-muted/40">
-        <Sidebar isOpen={isOpen} onClose={close} collapsed={collapsed} onToggleCollapse={toggleCollapse} />
-        <div className={cn(
-          "flex flex-1 flex-col transition-all duration-300 ease-in-out",
-          collapsed ? "md:ml-16" : "md:ml-64"
-        )}>
-          <Navbar toggleSidebar={toggle} isSidebarCollapsed={collapsed} />
-          <main className="flex items-center justify-center flex-1 p-4 md:p-6">
-            <Card className="w-full max-w-lg">
-              <CardHeader>
-                <CardTitle>Company Not Found</CardTitle>
-                <CardDescription>
-                  The company you're looking for doesn't exist or you don't have access to it.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <button 
-                  onClick={() => navigate('/companies')}
-                  className="inline-flex items-center rounded-md bg-primary px-3 py-2 text-sm font-medium text-white hover:bg-primary/90"
-                >
-                  Return to Companies List
-                </button>
-              </CardContent>
-            </Card>
-          </main>
-        </div>
-      </div>
+      <ErrorState
+        isOpen={isOpen}
+        toggle={toggle}
+        close={close}
+        collapsed={collapsed}
+        toggleCollapse={toggleCollapse}
+        error="The company you're looking for doesn't exist or you don't have access to it."
+        title="Company Not Found"
+      />
     );
   }
 
@@ -261,117 +79,17 @@ const CompanyDetails = () => {
       )}>
         <Navbar toggleSidebar={toggle} isSidebarCollapsed={collapsed} />
         <main className="flex-1 p-4 md:p-6">
-          <div className="mb-6">
-            <div className="flex items-center gap-2">
-              <Building2 className="h-6 w-6 text-primary" />
-              <h1 className="text-2xl font-bold tracking-tight">{company.business_name}</h1>
-            </div>
-            <p className="text-muted-foreground mt-1">
-              Company dashboard and statistics
-            </p>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-3 mb-6">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg font-medium">Customers</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center">
-                  <Users className="h-5 w-5 text-muted-foreground mr-2" />
-                  <span className="text-2xl font-bold">{company.customers_count}</span>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg font-medium">Products</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center">
-                  <Package2 className="h-5 w-5 text-muted-foreground mr-2" />
-                  <span className="text-2xl font-bold">{company.products_count}</span>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg font-medium">Orders</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center">
-                  <FileText className="h-5 w-5 text-muted-foreground mr-2" />
-                  <span className="text-2xl font-bold">{company.orders_count}</span>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Tabs defaultValue="overview">
-            <TabsList>
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="customers">Customers</TabsTrigger>
-              <TabsTrigger value="products">Products</TabsTrigger>
-              <TabsTrigger value="orders">Orders</TabsTrigger>
-            </TabsList>
-            <TabsContent value="overview">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Company Information</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-sm font-medium">Business Name</p>
-                      <p className="text-lg">{company.business_name}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Owner</p>
-                      <p className="text-lg">{company.owner.first_name} {company.owner.last_name}</p>
-                      <p className="text-sm text-muted-foreground">{company.owner.email}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Company Created</p>
-                      <p className="text-lg">{new Date(company.created_at).toLocaleDateString()}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            <TabsContent value="customers">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Customer Management</CardTitle>
-                  <CardDescription>View and manage company customers</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p>Customer management coming soon...</p>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            <TabsContent value="products">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Product Inventory</CardTitle>
-                  <CardDescription>View and manage company products</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p>Product management coming soon...</p>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            <TabsContent value="orders">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Order Management</CardTitle>
-                  <CardDescription>View and manage company orders</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p>Order management coming soon...</p>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+          <CompanyHeader businessName={company.business_name} />
+          <CompanyStatCards
+            customersCount={company.customers_count}
+            productsCount={company.products_count}
+            ordersCount={company.orders_count}
+          />
+          <CompanyTabs
+            businessName={company.business_name}
+            owner={company.owner}
+            createdAt={company.created_at}
+          />
         </main>
       </div>
     </div>
