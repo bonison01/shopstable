@@ -11,11 +11,21 @@ import { ErrorState } from "@/components/company/ErrorState";
 import { CompanyHeader } from "@/components/company/CompanyHeader";
 import { CompanyStatCards } from "@/components/company/CompanyStatCards";
 import { CompanyTabs } from "@/components/company/CompanyTabs";
+import { useEffect } from "react";
 
 const CompanyDetails = () => {
   const { companyId } = useParams<{ companyId: string }>();
   const { isOpen, toggle, close, collapsed, toggleCollapse } = useSidebar();
-  const { staffCompanyAccess } = useAuth();
+  const { staffCompanyAccess, user, signOut } = useAuth();
+  
+  // For debugging: Log important state values
+  useEffect(() => {
+    console.log("CompanyDetails rendered with:", {
+      companyId,
+      user: user ? "User exists" : "No user",
+      staffCompanyAccess: staffCompanyAccess ? `Access list: ${staffCompanyAccess.length}` : "No access data"
+    });
+  }, [companyId, user, staffCompanyAccess]);
 
   // Check if user has access to this company
   const hasAccess = () => {
@@ -30,6 +40,15 @@ const CompanyDetails = () => {
   };
 
   const { company, loading, error } = useCompanyDetails(companyId, hasAccess);
+
+  // Debug the result of useCompanyDetails
+  useEffect(() => {
+    console.log("Company details state:", {
+      loading,
+      error,
+      company: company ? "Company data exists" : "No company data"
+    });
+  }, [company, loading, error]);
 
   if (loading) {
     return (

@@ -30,7 +30,12 @@ export const useCompanyDetails = (companyId: string | undefined, hasAccess: () =
 
   useEffect(() => {
     const fetchCompanyDetails = async () => {
-      if (!companyId) return;
+      if (!companyId) {
+        console.log("No company ID provided");
+        setLoading(false);
+        setError("No company ID provided");
+        return;
+      }
       
       // Verify access
       if (!hasAccess()) {
@@ -55,7 +60,15 @@ export const useCompanyDetails = (companyId: string | undefined, hasAccess: () =
           .eq('id', companyId)
           .single();
 
-        if (companyError) throw companyError;
+        if (companyError) {
+          console.error("Error fetching company data:", companyError);
+          throw companyError;
+        }
+        
+        if (!companyData) {
+          console.error("No company data found");
+          throw new Error("Company not found");
+        }
         
         console.log("Fetched company data:", companyData);
         
@@ -134,14 +147,15 @@ export const useCompanyDetails = (companyId: string | undefined, hasAccess: () =
         setError(null);
       } catch (error: any) {
         console.error("Error fetching company details:", error);
-        setError(error.message);
+        setError(error.message || "An error occurred while fetching company details");
+        setCompany(null);
       } finally {
         setLoading(false);
       }
     };
 
     fetchCompanyDetails();
-  }, [companyId]);
+  }, [companyId, hasAccess]);
 
   return { company, loading, error };
 };

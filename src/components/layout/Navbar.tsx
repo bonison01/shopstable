@@ -37,6 +37,16 @@ export function Navbar({ toggleSidebar, isSidebarCollapsed }: NavbarProps) {
     return user?.email?.substring(0, 2).toUpperCase() || "U";
   };
 
+  const handleSignOut = async () => {
+    try {
+      console.log("Signing out user...");
+      await signOut();
+      console.log("User signed out successfully");
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  };
+
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
       <div className="flex items-center">
@@ -144,7 +154,7 @@ export function Navbar({ toggleSidebar, isSidebarCollapsed }: NavbarProps) {
               Settings
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={signOut}>
+            <DropdownMenuItem onClick={handleSignOut}>
               Log out
             </DropdownMenuItem>
           </DropdownMenuContent>
