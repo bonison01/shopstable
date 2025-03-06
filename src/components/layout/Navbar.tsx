@@ -1,3 +1,4 @@
+
 import { Menu, BellDot, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,16 +36,6 @@ export function Navbar({ toggleSidebar, isSidebarCollapsed }: NavbarProps) {
       return `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase();
     }
     return user?.email?.substring(0, 2).toUpperCase() || "U";
-  };
-
-  const handleSignOut = async () => {
-    try {
-      console.log("Signing out user...");
-      await signOut();
-      console.log("User signed out successfully");
-    } catch (error) {
-      console.error("Error signing out:", error);
-    }
   };
 
   return (
@@ -103,7 +94,7 @@ export function Navbar({ toggleSidebar, isSidebarCollapsed }: NavbarProps) {
                 {staffCompanyAccess.map((company) => (
                   <DropdownMenuItem 
                     key={company.id}
-                    onClick={() => navigate(`/companies/${company.id}`)}
+                    onClick={() => navigate(`/company/${company.id}`)}
                   >
                     {company.business_name}
                   </DropdownMenuItem>
@@ -154,7 +145,7 @@ export function Navbar({ toggleSidebar, isSidebarCollapsed }: NavbarProps) {
               Settings
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleSignOut}>
+            <DropdownMenuItem onClick={signOut}>
               Log out
             </DropdownMenuItem>
           </DropdownMenuContent>

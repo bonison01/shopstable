@@ -1,10 +1,9 @@
-
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { X, Home, CreditCard, Users, Package, LineChart, BarChart3, DollarSign, Settings, Users2, Building2 } from "lucide-react";
+import { X, Home, CreditCard, Users, Package, LineChart, BarChart3, DollarSign, Settings, Users2 } from "lucide-react";
 import { useAuth } from "@/contexts/auth/useAuth";
 
 interface SidebarProps {
@@ -24,9 +23,8 @@ interface NavItemProps {
 
 export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: SidebarProps) {
   const location = useLocation();
-  const { profile, isStaff, staffCompanyAccess } = useAuth();
-  const { pathname } = useLocation();
-
+  const { profile } = useAuth();
+  
   const NavItem = ({ icon, label, href, collapsed, active }: NavItemProps) => (
     <Link to={href} className="w-full">
       <Button
@@ -57,19 +55,8 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
     { icon: <Settings size={20} />, label: "Settings", href: "/settings" },
   ];
 
-  // Add Companies link for staff users
-  if (isStaff && staffCompanyAccess && staffCompanyAccess.length > 0) {
-    navigation.push({ 
-      icon: <Building2 size={20} />, 
-      label: "Companies", 
-      href: "/companies" 
-    });
-  }
-
-  console.log("Staff access:", isStaff, staffCompanyAccess);
-
   const sidebarContent = (
-    <div className="flex h-full flex-col px-2 py-4" id="main-sidebar">
+    <div className="flex h-full flex-col px-2 py-4">
       <div className="mb-10 flex items-center justify-between border-b pb-4">
         {!collapsed && (
           <div>
@@ -151,8 +138,6 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
     </div>
   );
 
-  const showCompanies = isStaff && staffCompanyAccess && staffCompanyAccess.length > 0;
-
   return (
     <>
       {/* Mobile Sidebar (Sheet) */}
@@ -170,30 +155,6 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
         )}
       >
         {sidebarContent}
-        {showCompanies && (
-          <div className="px-3 py-2">
-            <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">
-              {collapsed ? "" : "Shared Companies"}
-            </h2>
-            <div className="space-y-1">
-              {staffCompanyAccess?.map((company) => (
-                <Link
-                  key={company.id}
-                  to={`/companies/${company.id}`}
-                  className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:text-primary",
-                    pathname === `/companies/${company.id}`
-                      ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:bg-muted"
-                  )}
-                >
-                  <Building2 className={cn("h-4 w-4", collapsed ? "mx-auto" : "")} />
-                  {!collapsed && <span>{company.business_name}</span>}
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </>
   );

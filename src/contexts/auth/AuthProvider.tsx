@@ -38,74 +38,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Fetch company access for staff members
   const fetchCompanyAccess = async (email: string) => {
     try {
-      setIsLoading(true);
-      console.log('Fetching company access for email:', email);
-      
       // First get staff ID by email
       const { data: staffData, error: staffError } = await supabase
         .from('staff')
         .select('id')
         .eq('staff_email', email)
-        .maybeSingle();
+        .single();
 
-      if (staffError) {
-        console.error('Error fetching staff data:', staffError);
+      if (staffError || !staffData) {
+        console.log('Not found as staff or error:', staffError);
         setStaffCompanyAccess(null);
-        setIsLoading(false);
         return;
       }
-
-      if (!staffData) {
-        console.log('No staff record found for email:', email);
-        setStaffCompanyAccess(null);
-        setIsLoading(false);
-        return;
-      }
-
-      console.log('Found staff record:', staffData);
 
       // Now get company access with staff ID
       const { data: accessData, error: accessError } = await supabase
         .from('company_access')
-        .select(`
-          id,
-          business_name,
-          owner_id,
-          staff_id,
-          created_at
-        `)
+        .select('id, business_name, owner_id, staff_id, created_at')
         .eq('staff_id', staffData.id);
 
       if (accessError) {
         console.error('Error fetching company access:', accessError);
         setStaffCompanyAccess(null);
-        setIsLoading(false);
         return;
       }
 
-      // Transform data to match CompanyAccessType
-      if (accessData && accessData.length > 0) {
-        console.log('Raw company access data:', accessData);
-        
-        const transformedData = accessData.map(item => ({
-          id: item.id,
-          business_name: item.business_name || 'Unknown Company',
-          owner_id: item.owner_id || '',
-          staff_id: item.staff_id,
-          created_at: item.created_at
-        }));
-        
-        console.log('Transformed company access:', transformedData);
-        setStaffCompanyAccess(transformedData as CompanyAccessType[]);
-      } else {
-        console.log('No company access found');
-        setStaffCompanyAccess([]);
-      }
+      setStaffCompanyAccess(accessData as CompanyAccessType[]);
     } catch (error) {
       console.error('Error in fetchCompanyAccess:', error);
       setStaffCompanyAccess(null);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -116,9 +77,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchProfile(session.user.id);
-        if (session.user.email) {
-          fetchCompanyAccess(session.user.email);
-        }
+        fetchCompanyAccess(session.user.email);
       } else {
         setIsLoading(false);
       }
@@ -132,9 +91,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (session?.user) {
           fetchProfile(session.user.id);
-          if (session.user.email) {
-            fetchCompanyAccess(session.user.email);
-          }
+          fetchCompanyAccess(session.user.email);
         } else {
           setProfile(null);
           setIsAdmin(false);
