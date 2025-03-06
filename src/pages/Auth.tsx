@@ -47,7 +47,7 @@ const Auth = () => {
         <Card className="animate-fade-in-up">
           <CardHeader className="space-y-1">
             <div className="flex justify-center mb-4">
-              <h1 className="text-2xl font-bold text-primary">CustomerFlow</h1>
+              <h1 className="text-2xl font-bold text-primary">M-Box</h1>
             </div>
             <CardTitle className="text-xl text-center">Welcome</CardTitle>
             <CardDescription className="text-center">
