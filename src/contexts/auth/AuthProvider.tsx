@@ -68,12 +68,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data: accessData, error: accessError } = await supabase
         .from('company_access')
         .select(`
-          company_id,
-          profiles!company_id (
-            id,
-            business_name,
-            owner_id
-          ),
+          id,
+          business_name,
+          owner_id,
           staff_id,
           created_at
         `)
@@ -91,9 +88,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('Raw company access data:', accessData);
         
         const transformedData = accessData.map(item => ({
-          id: item.company_id,
-          business_name: item.profiles?.business_name || 'Unknown Company',
-          owner_id: item.profiles?.owner_id || '',
+          id: item.id,
+          business_name: item.business_name || 'Unknown Company',
+          owner_id: item.owner_id || '',
           staff_id: item.staff_id,
           created_at: item.created_at
         }));

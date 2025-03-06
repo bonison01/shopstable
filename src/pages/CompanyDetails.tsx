@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,6 +23,12 @@ interface CompanyData {
   customers_count: number;
   products_count: number;
   orders_count: number;
+}
+
+interface OwnerData {
+  first_name: string;
+  last_name: string;
+  email: string;
 }
 
 const CompanyDetails = () => {
@@ -63,42 +68,73 @@ const CompanyDetails = () => {
         console.log("Fetching company details for ID:", companyId);
         setLoading(true);
         
-        // Get company details and owner info
-        const { data, error } = await supabase
+        // First, fetch basic company details
+        const { data: companyData, error: companyError } = await supabase
           .from('profiles')
           .select(`
             id,
             business_name,
-            created_at,
-            owner:id (
-              first_name,
-              last_name,
-              email
-            )
+            created_at
           `)
           .eq('id', companyId)
           .single();
 
-        if (error) throw error;
+        if (companyError) throw companyError;
         
-        console.log("Fetched company data:", data);
+        console.log("Fetched company data:", companyData);
+        
+        // Then, fetch owner details separately
+        const { data: ownerData, error: ownerError } = await supabase
+          .from('profiles')
+          .select(`
+            first_name,
+            last_name,
+            email
+          `)
+          .eq('id', companyId)
+          .single();
+          
+        if (ownerError) {
+          console.error("Error fetching owner data:", ownerError);
+          // Create fallback owner data
+          const fallbackOwner: OwnerData = {
+            first_name: "Unknown",
+            last_name: "Owner",
+            email: "unknown@example.com"
+          };
+          ownerData = fallbackOwner;
+        }
         
         // Get count statistics
-        const [customersResult, productsResult, ordersResult] = await Promise.all([
-          supabase.from('customers').select('id', { count: 'exact' }).eq('company_id', companyId),
-          supabase.from('products').select('id', { count: 'exact' }).eq('company_id', companyId),
-          supabase.from('orders').select('id', { count: 'exact' }).eq('company_id', companyId)
-        ]);
+        const customersResult = await supabase
+          .from('customers')
+          .select('id', { count: 'exact' })
+          .eq('company_id', companyId);
+          
+        const productsResult = await supabase
+          .from('products')
+          .select('id', { count: 'exact' })
+          .eq('company_id', companyId);
+          
+        const ordersResult = await supabase
+          .from('orders')
+          .select('id', { count: 'exact' })
+          .eq('company_id', companyId);
 
-        const companyData: CompanyData = {
-          ...data,
+        const companyWithDetails: CompanyData = {
+          ...companyData,
+          owner: ownerData || {
+            first_name: "Unknown",
+            last_name: "Owner",
+            email: "unknown@example.com"
+          },
           customers_count: customersResult.count || 0,
           products_count: productsResult.count || 0,
           orders_count: ordersResult.count || 0
         };
 
-        console.log("Company data with counts:", companyData);
-        setCompany(companyData);
+        console.log("Company data with counts:", companyWithDetails);
+        setCompany(companyWithDetails);
       } catch (error: any) {
         console.error("Error fetching company details:", error);
         setError(error.message);
