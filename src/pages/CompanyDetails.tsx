@@ -108,29 +108,51 @@ const CompanyDetails = () => {
           finalOwnerData = ownerData;
         }
         
-        // Get count statistics - use .maybeSingle() instead of .single()
-        // and handle count with proper type handling
-        const customersResult = await supabase
-          .from('customers')
-          .select('id', { count: 'exact', head: true })
-          .eq('company_id', companyId);
+        // Get count statistics - fix type issues by using simpler count query approach
+        // Using raw count queries to avoid deep type instantiation issues
+        let customersCount = 0;
+        let productsCount = 0;
+        let ordersCount = 0;
+        
+        try {
+          const { count: customerCount } = await supabase
+            .from('customers')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', companyId);
           
-        const productsResult = await supabase
-          .from('products')
-          .select('id', { count: 'exact', head: true })
-          .eq('company_id', companyId);
+          customersCount = customerCount || 0;
+        } catch (err) {
+          console.error("Error fetching customers count:", err);
+        }
+        
+        try {
+          const { count: productCount } = await supabase
+            .from('products')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', companyId);
           
-        const ordersResult = await supabase
-          .from('orders')
-          .select('id', { count: 'exact', head: true })
-          .eq('company_id', companyId);
+          productsCount = productCount || 0;
+        } catch (err) {
+          console.error("Error fetching products count:", err);
+        }
+        
+        try {
+          const { count: orderCount } = await supabase
+            .from('orders')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', companyId);
+          
+          ordersCount = orderCount || 0;
+        } catch (err) {
+          console.error("Error fetching orders count:", err);
+        }
 
         const companyWithDetails: CompanyData = {
           ...companyData,
           owner: finalOwnerData,
-          customers_count: customersResult.count || 0,
-          products_count: productsResult.count || 0,
-          orders_count: ordersResult.count || 0
+          customers_count: customersCount,
+          products_count: productsCount,
+          orders_count: ordersCount
         };
 
         console.log("Company data with counts:", companyWithDetails);
