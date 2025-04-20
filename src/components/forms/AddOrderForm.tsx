@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -32,9 +31,9 @@ const AddOrderForm = ({ onSuccess }: { onSuccess?: () => void }) => {
 
   const addItem = () => {
     const updatedItems = addOrderItem(
-      currentItem, 
-      order, 
-      products, 
+      currentItem,
+      order,
+      products,
       customers,
       (message) => toast({
         variant: "destructive",
@@ -42,7 +41,7 @@ const AddOrderForm = ({ onSuccess }: { onSuccess?: () => void }) => {
         description: message,
       })
     );
-    
+
     if (updatedItems) {
       setOrder(prev => ({ ...prev, items: updatedItems }));
       setCurrentItem({ product_id: "", quantity: 1 });
@@ -65,7 +64,7 @@ const AddOrderForm = ({ onSuccess }: { onSuccess?: () => void }) => {
     }
 
     const result = await createOrder(order);
-    
+
     if (result.success) {
       toast({
         title: "Order Created",
@@ -88,8 +87,18 @@ const AddOrderForm = ({ onSuccess }: { onSuccess?: () => void }) => {
         description: result.error || "Failed to create order",
       });
     }
-    
+
     setIsSubmitting(false);
+  };
+
+  // New handler for updating subtotal
+  const handleSubtotalChange = (index: number, value: number) => {
+    const updatedItems = [...order.items];
+    updatedItems[index] = {
+      ...updatedItems[index],
+      subtotal: value,
+    };
+    setOrder(prev => ({ ...prev, items: updatedItems }));
   };
 
   return (
@@ -101,8 +110,8 @@ const AddOrderForm = ({ onSuccess }: { onSuccess?: () => void }) => {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-      
-      <OrderFormFields 
+
+      <OrderFormFields
         customerId={order.customer_id}
         status={order.status}
         paymentStatus={order.payment_status}
@@ -110,8 +119,8 @@ const AddOrderForm = ({ onSuccess }: { onSuccess?: () => void }) => {
         customersLoading={customersLoading}
         onFieldChange={handleChange}
       />
-      
-      <OrderItemManager 
+
+      <OrderItemManager
         items={order.items}
         currentItem={currentItem}
         products={products}
@@ -120,8 +129,9 @@ const AddOrderForm = ({ onSuccess }: { onSuccess?: () => void }) => {
         onRemoveItem={removeItem}
         onItemChange={handleItemChange}
         calculateTotal={calculateTotal}
+        onSubtotalChange={handleSubtotalChange} // Pass the handler for updating subtotal
       />
-      
+
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={() => {
           if (onSuccess) onSuccess();

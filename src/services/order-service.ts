@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { type OrderFormState, type OrderItem } from "@/hooks/use-order-form";
 
@@ -25,7 +24,7 @@ export const createOrder = async (order: OrderFormState): Promise<OrderCreationR
 
     const total = order.items.reduce((sum, item) => sum + item.subtotal, 0);
 
-    // Check if payment_amount exists and is valid
+    // Handle payment logic
     let paymentAmount = null;
     if (order.payment_status === 'paid') {
       paymentAmount = total;
@@ -36,6 +35,7 @@ export const createOrder = async (order: OrderFormState): Promise<OrderCreationR
       paymentAmount = Math.min(order.payment_amount, total);
     }
 
+    // Create order
     const { data: orderData, error: orderError } = await supabase
       .from('orders')
       .insert({
@@ -50,6 +50,7 @@ export const createOrder = async (order: OrderFormState): Promise<OrderCreationR
 
     if (orderError) throw orderError;
 
+    // Insert order items
     const orderItems = order.items.map(item => ({
       order_id: orderData.id,
       product_id: item.product_id,
@@ -65,7 +66,10 @@ export const createOrder = async (order: OrderFormState): Promise<OrderCreationR
 
     if (itemsError) throw itemsError;
 
+    // Deduct inventory stock
     await updateProductStocks(order.items);
+
+    // Update customer stats
     await updateCustomerStats(order.customer_id, total);
 
     return {
@@ -81,22 +85,21 @@ export const createOrder = async (order: OrderFormState): Promise<OrderCreationR
 };
 
 export const updateOrder = async (
-  orderId: string, 
+  orderId: string,
   data: { status?: string; payment_status?: string; payment_amount?: number | null }
 ): Promise<OrderUpdateResult> => {
   try {
-    // Ensure payment amount is positive if provided
     if (data.payment_amount !== undefined && data.payment_amount !== null && data.payment_amount <= 0) {
       throw new Error("Payment amount must be greater than zero");
     }
-    
+
     const { error } = await supabase
       .from('orders')
       .update(data)
       .eq('id', orderId);
-      
+
     if (error) throw error;
-    
+
     return {
       success: true
     };
@@ -111,84 +114,63 @@ export const updateOrder = async (
 const updateProductStocks = async (items: OrderItem[]) => {
   for (const item of items) {
     try {
-      // First, we need to get the current product to update it
       const { data: productData, error: fetchError } = await supabase
         .from('products')
         .select('stock')
         .eq('id', item.product_id)
         .single();
-        
-      if (fetchError) {
-        console.error("Error fetching product:", fetchError);
+
+      if (fetchError || !productData) {
+        console.error("Error fetching product stock:", fetchError);
         continue;
       }
-        
-      // Try to use RPC but now without the id parameter which was causing the error
-      const { error: rpcError } = await supabase.rpc('decrement', {
-        x: item.quantity
-      });
 
-      if (rpcError) {
-        // If RPC fails, fall back to direct update
-        console.error("Error using RPC to update stock:", rpcError);
-        
-        const newStock = Math.max(0, (productData.stock || 0) - item.quantity);
-        const { error: updateError } = await supabase
-          .from('products')
-          .update({ 
-            stock: newStock,
-            last_updated: new Date().toISOString()
-          })
-          .eq('id', item.product_id);
-          
-        if (updateError) {
-          console.error("Error updating stock:", updateError);
-        }
+      const currentStock = productData.stock || 0;
+      const newStock = Math.max(0, currentStock - item.quantity);
+
+      const { error: updateError } = await supabase
+        .from('products')
+        .update({
+          stock: newStock,
+          last_updated: new Date().toISOString()
+        })
+        .eq('id', item.product_id);
+
+      if (updateError) {
+        console.error("Error updating stock for product", item.product_id, updateError);
       }
-    } catch (error) {
-      console.error("Error updating product stock:", error);
+    } catch (err) {
+      console.error("Unhandled error updating stock for item:", item.product_id, err);
     }
   }
 };
 
 const updateCustomerStats = async (customerId: string, total: number) => {
   try {
-    // First get current customer data
     const { data: customerData, error: fetchError } = await supabase
       .from('customers')
       .select('total_orders, total_spent')
       .eq('id', customerId)
       .single();
-      
-    if (fetchError) {
+
+    if (fetchError || !customerData) {
       console.error("Error fetching customer:", fetchError);
       return;
     }
-    
-    // Fix RPC call by removing the id parameter
-    const { error: rpcError } = await supabase.rpc('add_amount', {
-      base: customerData.total_spent || 0,
-      amount: total
-    });
 
-    if (rpcError) {
-      // If RPC fails, fall back to direct update
-      console.error("Error using RPC to update customer stats:", rpcError);
-      
-      const newTotalOrders = (customerData.total_orders || 0) + 1;
-      const newTotalSpent = (customerData.total_spent || 0) + total;
-      
-      const { error: updateError } = await supabase
-        .from('customers')
-        .update({ 
-          total_orders: newTotalOrders,
-          total_spent: newTotalSpent
-        })
-        .eq('id', customerId);
-        
-      if (updateError) {
-        console.error("Error updating customer stats:", updateError);
-      }
+    const newTotalOrders = (customerData.total_orders || 0) + 1;
+    const newTotalSpent = (customerData.total_spent || 0) + total;
+
+    const { error: updateError } = await supabase
+      .from('customers')
+      .update({
+        total_orders: newTotalOrders,
+        total_spent: newTotalSpent
+      })
+      .eq('id', customerId);
+
+    if (updateError) {
+      console.error("Error updating customer stats:", updateError);
     }
   } catch (error) {
     console.error("Error updating customer stats:", error);
