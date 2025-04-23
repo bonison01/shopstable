@@ -24,7 +24,7 @@ interface NavItemProps {
 export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: SidebarProps) {
   const location = useLocation();
   const { profile } = useAuth();
-  
+
   const NavItem = ({ icon, label, href, collapsed, active }: NavItemProps) => (
     <Link to={href} className="w-full">
       <Button
