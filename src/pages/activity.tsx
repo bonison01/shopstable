@@ -32,7 +32,7 @@ const RecentActivities = () => {
     const { isOpen, toggle, close, collapsed, toggleCollapse } = useSidebar();
 
     return (
-        <div className="flex min-h-screen bg-muted/40">
+        <div className="flex min-h-screen bg-gradient-to-r from-blue-50 to-blue-100">
             <Sidebar
                 isOpen={isOpen}
                 onClose={close}
@@ -49,39 +49,41 @@ const RecentActivities = () => {
                     isSidebarCollapsed={collapsed}
                 />
 
-                <main className="flex-1 p-4 md:p-6 lg:p-8">
+                <main className="flex-1 p-6 md:p-8 lg:p-10">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
                         <div>
-                            <h1 className="text-3xl font-bold tracking-tight mb-1">Recent Product Activities</h1>
-                            <p className="text-muted-foreground">List of recent updates or actions made on products</p>
+                            <h1 className="text-4xl font-semibold text-gray-800 tracking-tight mb-2">Recent Product Activities</h1>
+                            <p className="text-sm text-gray-600">List of recent updates or actions made on products</p>
                         </div>
                     </div>
 
                     {/* Show Loading Spinner */}
                     {isLoading && (
                         <div className="flex justify-center items-center">
-                            <div className="animate-pulse">Loading recent activities...</div>
+                            <div className="animate-pulse text-lg text-gray-600">Loading recent activities...</div>
                         </div>
                     )}
 
                     {/* Show Error */}
                     {isError && (
-                        <div className="flex justify-center items-center text-red-500">
+                        <div className="flex justify-center items-center text-red-500 font-semibold">
                             <p>Error fetching recent activities</p>
                         </div>
                     )}
 
                     {/* Show Data */}
                     {!isLoading && !isError && recentActivities?.length > 0 && (
-                        <div className="grid gap-6 mb-8">
+                        <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mb-8">
                             {recentActivities.map((activity) => (
-                                <Card key={activity.id}>
-                                    <CardHeader>
-                                        <CardTitle>{activity.name}</CardTitle>
-                                        <CardDescription>Last updated: {new Date(activity.last_updated).toLocaleString()}</CardDescription>
+                                <Card key={activity.id} className="border border-gray-200 shadow-lg rounded-lg hover:shadow-xl transition-all">
+                                    <CardHeader className="bg-gray-100 p-4 rounded-t-lg">
+                                        <CardTitle className="text-xl font-medium text-gray-800">{activity.name}</CardTitle>
+                                        <CardDescription className="text-sm text-gray-500">
+                                            Last updated: {new Date(activity.last_updated).toLocaleString()}
+                                        </CardDescription>
                                     </CardHeader>
-                                    <CardContent>
-                                        <div className="text-sm">
+                                    <CardContent className="p-4">
+                                        <div className="text-sm text-gray-700">
                                             <p><strong>Price:</strong> {activity.price ? `$${activity.price}` : 'N/A'}</p>
                                             <p><strong>Availability:</strong> {activity.category_type}</p> {/* Assuming this field replaces status */}
                                             <p><strong>Stock Quantity:</strong> {activity.retail_price}</p> {/* Replace with the actual stock field */}
@@ -95,7 +97,7 @@ const RecentActivities = () => {
                     {/* No Activities Available */}
                     {!isLoading && !isError && recentActivities?.length === 0 && (
                         <div className="flex justify-center items-center text-muted-foreground">
-                            <p>No recent activities available</p>
+                            <p className="text-lg font-semibold text-gray-500">No recent activities available</p>
                         </div>
                     )}
                 </main>
