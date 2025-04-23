@@ -13,6 +13,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Staff from './pages/Staff';
 import Settings from './pages/Settings';
 import CompanyDetails from './pages/CompanyDetails';
+import RecentActivities from './pages/activity';
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
         <Route path="/cash-flow" element={<CashFlow />} />
         <Route path="/staff" element={<Staff />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/activity" element={<RecentActivities />} />
         <Route path="/company/:companyId" element={<CompanyDetails />} />
       </Route>
       <Route path="/auth" element={<Auth />} />
